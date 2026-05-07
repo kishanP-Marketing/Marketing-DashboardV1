@@ -1,0 +1,2685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance Dashboard — Paid & Organic</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f12;--bg2:#13161b;--bg3:#1a1e25;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e8eaed;--text2:#8b9099;--text3:#555c67;
+  --acc:#2ecc8a;--acc-dim:rgba(46,204,138,0.15);--acc-border:rgba(46,204,138,0.25);
+  --green:#2ecc8a;--green-dim:rgba(46,204,138,0.15);
+  --amber:#f0a442;--amber-dim:rgba(240,164,66,0.15);
+  --red:#f05252;--red-dim:rgba(240,82,82,0.15);
+  --blue:#4da6ff;--blue-dim:rgba(77,166,255,0.15);
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+html{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;}
+body{min-height:100vh;}
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.ch-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg3);border-radius:8px;padding:3px;}
+.ch-btn{padding:8px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text3);background:none;border:none;font-family:var(--font);transition:all 0.15s;text-align:center;}
+.ch-btn:hover{color:var(--text2);}
+.ch-btn.active{background:var(--bg2);border:1px solid var(--border);color:var(--acc);}
+.logo-mark{font-size:10px;font-weight:500;letter-spacing:0.12em;color:var(--acc);text-transform:uppercase;font-family:var(--mono);}
+.logo-title{font-size:15px;font-weight:500;color:var(--text);line-height:1.3;margin-top:2px;}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.nav-group{display:flex;flex-direction:column;gap:2px;}
+.nav-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);padding:0 8px;margin-bottom:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;font-size:12px;color:var(--text2);cursor:pointer;transition:all 0.15s;border:1px solid transparent;}
+.nav-item:hover{background:var(--bg3);color:var(--text);}
+.nav-item.active{background:var(--acc-dim);color:var(--acc);border-color:var(--acc-border);}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.sidebar-footer{margin-top:auto;}
+.date-badge{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;}
+.db-label{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:0.08em;}
+.db-val{font-size:12px;color:var(--text2);margin-top:1px;}
+.main{padding:28px 32px;overflow-y:auto;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
+.page-title{font-size:22px;font-weight:500;letter-spacing:-0.02em;}
+.page-sub{font-size:12px;color:var(--text2);margin-top:3px;}
+.channel-badge{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--text2);flex-shrink:0;}
+.cb-dot{width:8px;height:8px;border-radius:50%;background:var(--acc);}
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;transition:border-color 0.15s;}
+.kpi:hover{border-color:var(--border2);}
+.kpi-label{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:5px;}
+.kpi-val{font-size:20px;font-weight:500;letter-spacing:-0.02em;}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.kpi-accent{border-top:2px solid var(--acc);}
+.banner{border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+.banner-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.banner-title{font-size:13px;font-weight:500;}
+.banner-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.banner-stat{font-size:20px;font-weight:500;font-family:var(--mono);flex-shrink:0;}
+.tab-nav{display:flex;gap:2px;background:var(--bg3);border-radius:8px;padding:3px;margin-bottom:18px;flex-wrap:wrap;}
+.tab-btn{padding:6px 13px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text3);transition:all 0.15s;border:none;background:none;font-family:var(--font);}
+.tab-btn:hover{color:var(--text2);}
+.tab-btn.active{background:var(--bg2);color:var(--text);border:1px solid var(--border);}
+.tab-pane{display:none;}.tab-pane.active{display:block;}
+.quad-legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;}
+.ql-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);}
+.ql-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.matrix-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;position:relative;}
+.matrix-chart{position:relative;height:460px;}
+.controls{display:flex;gap:8px;align-items:center;}
+.ctrl-btn{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text2);cursor:pointer;transition:all 0.15s;font-family:var(--font);}
+.ctrl-btn:hover{border-color:var(--border2);color:var(--text);}
+.ctrl-btn.active{background:var(--acc-dim);border-color:var(--acc-border);color:var(--acc);}
+select.ctrl-select{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font);outline:none;}
+.chart-tooltip{position:absolute;pointer-events:none;opacity:0;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;font-size:12px;z-index:100;transition:opacity 0.1s;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+.chart-tooltip.show{opacity:1;}
+.tt-state{font-size:14px;font-weight:500;color:var(--text);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:7px;}
+.tt-row{display:flex;justify-content:space-between;gap:20px;margin-bottom:3px;}
+.tt-key{color:var(--text3);}.tt-val{color:var(--text);font-weight:500;font-family:var(--mono);font-size:11px;}
+.tt-action{margin-top:8px;padding-top:7px;border-top:1px solid var(--border);color:var(--text2);font-size:11px;line-height:1.5;}
+.section{margin-bottom:22px;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.section-title{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);}
+.cards-section{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.quad-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.qc-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.qc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.qc-title{font-size:13px;font-weight:500;}.qc-count{margin-left:auto;font-size:11px;color:var(--text3);font-family:var(--mono);}
+.state-pill{display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 9px;font-size:11px;color:var(--text2);margin:2px;}
+.sp-lta{font-family:var(--mono);font-size:10px;color:var(--text3);}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+thead tr{border-bottom:1px solid var(--border);}
+thead th{padding:10px 14px;text-align:left;font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:0.08em;text-transform:uppercase;font-weight:400;}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--bg3);}
+tbody td{padding:10px 14px;font-size:12px;color:var(--text2);}
+tbody td:first-child{color:var(--text);font-weight:500;}
+.mono{font-family:var(--mono);font-size:11px;}
+.pill{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:500;font-family:var(--mono);}
+.pill-green{background:var(--green-dim);color:var(--green);}
+.pill-blue{background:var(--blue-dim);color:var(--blue);}
+.pill-amber{background:var(--amber-dim);color:var(--amber);}
+.pill-red{background:var(--red-dim);color:var(--red);}
+.pill-gray{background:rgba(255,255,255,0.06);color:var(--text3);}
+.trend-up{color:var(--green);}.trend-down{color:var(--red);}.trend-flat{color:var(--text3);}
+.map-container{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;position:relative;overflow:hidden;}
+.state-path{transition:fill 0.45s ease;cursor:pointer;}.state-path:hover{opacity:0.8;stroke-width:1.5!important;}
+.map-tooltip{position:fixed;pointer-events:none;opacity:0;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;font-size:12px;z-index:9999;transition:opacity 0.1s;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+.map-tooltip.show{opacity:1;}
+.map-legend{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;}
+.map-legend-label{font-size:11px;color:var(--text3);font-family:var(--mono);}
+.map-legend-swatch{width:26px;height:9px;}
+.map-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.map-kpi{background:var(--bg3);border-radius:8px;padding:11px 13px;}
+.mk-label{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;}
+.mk-val{font-size:17px;font-weight:500;color:var(--text);}
+.slider-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-top:18px;}
+.slider-header{display:flex;align-items:center;justify-content:space-between;gap:18px;}
+.slider-inner{display:flex;flex-direction:column;gap:8px;flex:1;}
+.slider-month{font-size:19px;font-weight:500;font-family:var(--mono);color:var(--acc);}
+.slider-sub{font-size:11px;color:var(--text3);margin-bottom:2px;}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--acc);border:3px solid var(--bg);cursor:pointer;}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--acc);border:3px solid var(--bg);cursor:pointer;}
+.slider-ticks{display:flex;justify-content:space-between;}
+.slider-tick{font-size:11px;color:var(--text3);font-family:var(--mono);cursor:pointer;transition:color 0.15s;padding:2px 4px;border-radius:4px;}
+.slider-tick.active{color:var(--acc);font-weight:500;}
+.play-btn{background:var(--acc-dim);border:1px solid var(--acc-border);border-radius:8px;padding:9px 16px;font-size:12px;color:var(--acc);cursor:pointer;font-family:var(--font);white-space:nowrap;flex-shrink:0;}
+
+/* ── BUDGET MODELLER ── */
+.bm-header{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+.bm-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.bm-kpi.target-met{border-color:var(--green);border-top:2px solid var(--green);}
+.bm-kpi.target-miss{border-color:var(--red);border-top:2px solid var(--red);}
+.bm-kpi-label{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;}
+.bm-kpi-val{font-size:22px;font-weight:500;}
+.bm-kpi-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.bm-controls{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:22px;}
+.bm-slider-row{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.bm-slider-label{font-size:12px;color:var(--text2);width:130px;flex-shrink:0;}
+.bm-slider-val{font-size:16px;font-weight:500;font-family:var(--mono);color:var(--acc);width:90px;text-align:right;flex-shrink:0;}
+.bm-target-row{display:flex;align-items:center;gap:12px;padding-top:14px;border-top:1px solid var(--border);}
+.target-badge{display:flex;align-items:center;gap:8px;background:var(--green-dim);border:1px solid rgba(46,204,138,0.25);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--green);}
+.target-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.bm-table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.bm-table-wrap table{width:100%;}
+.bm-table-wrap thead th{padding:10px 14px;text-align:left;font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;font-weight:400;border-bottom:1px solid var(--border);}
+.bm-table-wrap tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s;}
+.bm-table-wrap tbody tr:last-child{border-bottom:none;}
+.bm-table-wrap tbody tr:hover{background:var(--bg3);}
+.bm-table-wrap tbody td{padding:9px 14px;font-size:12px;color:var(--text2);}
+.bm-table-wrap tbody td:first-child{color:var(--text);font-weight:500;}
+.bar-cell{display:flex;align-items:center;gap:8px;}
+.bar-track{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;min-width:60px;}
+.bar-fill{height:100%;border-radius:3px;transition:width 0.4s ease;}
+.change-pos{color:var(--green);font-family:var(--mono);font-size:11px;}
+.change-neg{color:var(--red);font-family:var(--mono);font-size:11px;}
+.change-neu{color:var(--text3);font-family:var(--mono);font-size:11px;}
+.override-input{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-size:11px;color:var(--text);font-family:var(--mono);width:72px;outline:none;}
+.override-input:focus{border-color:var(--acc);}
+
+/* ── CAMPAIGNS ── */
+.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:48px 32px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg2);}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--acc);background:var(--acc-dim);}
+.upload-zone.has-data{display:none;}
+.upload-icon{width:40px;height:40px;margin:0 auto 14px;opacity:0.4;}
+.upload-title{font-size:15px;font-weight:500;color:var(--text2);margin-bottom:6px;}
+.upload-sub{font-size:12px;color:var(--text3);}
+.upload-btn-label{display:inline-block;margin-top:16px;background:var(--acc-dim);border:1px solid var(--acc-border);border-radius:6px;padding:8px 18px;font-size:12px;color:var(--acc);cursor:pointer;}
+.camp-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+.camp-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.camp-kpi-label{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
+.camp-kpi-val{font-size:18px;font-weight:500;color:var(--text);}
+.camp-controls{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.camp-search{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--text);font-family:var(--font);outline:none;width:220px;}
+.camp-search::placeholder{color:var(--text3);}
+.camp-search:focus{border-color:var(--acc);}
+.no-data-state{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:60px 32px;text-align:center;color:var(--text3);font-size:13px;}
+.reset-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);}
+.reset-btn:hover{border-color:var(--border2);color:var(--text2);}
+
+/* ── PERIOD COMPARISON ── */
+.period-mode-bar{display:flex;gap:3px;background:var(--bg3);border-radius:8px;padding:3px;width:fit-content;}
+.period-mode-btn{padding:6px 13px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text3);transition:all 0.15s;border:none;background:none;font-family:var(--font);}
+.period-mode-btn:hover{color:var(--text2);}
+.period-mode-btn.active{background:var(--bg2);color:var(--text);border:1px solid var(--border);}
+.comp-kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px;}
+.comp-kpi{background:var(--bg3);border-radius:8px;padding:12px 14px;position:relative;}
+.comp-kpi-label{font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;}
+.comp-kpi-cur{font-size:18px;font-weight:500;color:var(--text);}
+.comp-kpi-prev{font-size:11px;color:var(--text3);margin-top:2px;}
+.comp-kpi-delta{font-size:12px;font-weight:500;margin-top:5px;}
+.delta-up{color:var(--green);} .delta-down{color:var(--red);} .delta-neu{color:var(--text3);}
+.period-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;font-size:12px;font-family:var(--mono);}
+.period-a-badge{background:var(--green-dim);color:var(--green);}
+.period-b-badge{background:rgba(255,255,255,0.05);color:var(--text3);}
+.date-input{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none;cursor:pointer;}
+.date-input:focus{border-color:var(--acc);}
+.no-dates-notice{background:var(--amber-dim);border:1px solid rgba(240,164,66,0.2);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;}
+
+@media print{.sidebar{display:none;}.shell{grid-template-columns:1fr;}.main{padding:16px;}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="ch-switch">
+      <button class="ch-btn active" id="ch-paid" onclick="switchChannel('paid')">Paid</button>
+      <button class="ch-btn" id="ch-organic" onclick="switchChannel('organic')">Organic</button>
+    </div>
+    <div>
+      <div class="logo-mark" id="logo-mark">Google Ads</div>
+      <div class="logo-title">Performance<br>Dashboard</div>
+      <div class="logo-sub">US Markets · Nov 2025–Mar 2026</div>
+    </div>
+    <nav class="nav-group">
+      <div class="nav-label">Views</div>
+      <div class="nav-item active" id="sidenav-matrix" onclick="showTab('matrix')"><span class="nav-dot"></span>Opportunity matrix</div>
+      <div class="nav-item" id="sidenav-map" onclick="showTab('map')"><span class="nav-dot"></span>LTA% state map</div>
+      <div class="nav-item" id="sidenav-table" onclick="showTab('table')"><span class="nav-dot"></span>State breakdown</div>
+      <div class="nav-item" id="sidenav-volume" onclick="showTab('volume')"><span class="nav-dot"></span>Volume trends</div>
+      <div class="nav-item" id="sidenav-budget" onclick="showTab('budget')"><span class="nav-dot" style="background:var(--amber)"></span>Budget modeller</div>
+      <div class="nav-item" id="sidenav-campaigns" onclick="showTab('campaigns')"><span class="nav-dot" style="background:var(--blue)"></span>Campaigns</div>
+      <div class="nav-item" id="sidenav-is" onclick="showTab('is')"><span class="nav-dot" style="background:#a78bfa"></span>Impression share</div>
+      <div class="nav-item" id="sidenav-pacing" onclick="showTab('pacing')"><span class="nav-dot" style="background:#f0a442"></span>Pacing</div>
+    </nav>
+    <nav class="nav-group">
+      <div class="nav-label">Filter quadrant</div>
+      <div class="nav-item" id="nav-all" onclick="filterQuad('all')" style="color:var(--text)"><span class="nav-dot" style="background:var(--text2)"></span>All states</div>
+      <div class="nav-item" id="nav-scale" onclick="filterQuad('scale')"><span class="nav-dot" style="background:var(--green)"></span>Scale now</div>
+      <div class="nav-item" id="nav-fix" onclick="filterQuad('fix')"><span class="nav-dot" style="background:var(--acc)"></span>Fix funnel</div>
+      <div class="nav-item" id="nav-nurture" onclick="filterQuad('nurture')"><span class="nav-dot" style="background:var(--amber)"></span>Nurture</div>
+      <div class="nav-item" id="nav-pause" onclick="filterQuad('pause')"><span class="nav-dot" style="background:var(--red)"></span>Pause / cut</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="date-badge">
+        <div class="db-label">Data range</div><div class="db-val">Nov 2025 — Mar 2026</div>
+        <div class="db-label" style="margin-top:7px">Active channel</div><div class="db-val" id="sb-channel" style="color:var(--acc)">Google Ads</div>
+        <div class="db-label" style="margin-top:7px">LTA% target</div><div class="db-val" style="color:var(--green)">5.0% national</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title" id="page-title">Performance Marketing Dashboard</div>
+        <div class="page-sub" id="page-sub">Signup → paying subscriber · Google Ads spend efficiency by state</div>
+      </div>
+      <div class="channel-badge"><div class="cb-dot"></div><span id="ch-badge-text">Google Ads active · Meta attribution paused</span></div>
+    </div>
+    <div class="kpi-strip" id="kpiStrip"></div>
+    <div class="banner" id="mainBanner"></div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('matrix')">Opportunity matrix</button>
+      <button class="tab-btn" onclick="showTab('map')">LTA% state map</button>
+      <button class="tab-btn" onclick="showTab('table')">State breakdown</button>
+      <button class="tab-btn" onclick="showTab('volume')">Volume trends</button>
+      <button class="tab-btn" onclick="showTab('budget')" style="color:var(--amber)">Budget modeller</button>
+      <button class="tab-btn" onclick="showTab('campaigns')" style="color:var(--blue)">Campaigns</button>
+      <button class="tab-btn" onclick="showTab('is')" style="color:#a78bfa">Impression share</button>
+      <button class="tab-btn" onclick="showTab('pacing')" style="color:#f0a442">Pacing</button>
+    </div>
+
+    <!-- MATRIX -->
+    <div class="tab-pane active" id="tab-matrix">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">LTA% vs volume trend · all states</div>
+          <div class="controls">
+            <span style="font-size:11px;color:var(--text3);margin-right:4px;">Bubble =</span>
+            <select class="ctrl-select" id="sizeMode" onchange="updateMatrixChart()"></select>
+          </div>
+        </div>
+        <div class="quad-legend">
+          <div class="ql-item"><div class="ql-dot" style="background:var(--green)"></div>Scale now</div>
+          <div class="ql-item"><div class="ql-dot" style="background:var(--acc)"></div>Fix funnel</div>
+          <div class="ql-item"><div class="ql-dot" style="background:var(--amber)"></div>Nurture</div>
+          <div class="ql-item"><div class="ql-dot" style="background:var(--red)"></div>Pause / cut</div>
+        </div>
+        <div class="matrix-wrap">
+          <div id="tooltip" class="chart-tooltip"></div>
+          <div class="matrix-chart"><canvas id="matrixChart"></canvas></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">States by quadrant</div></div>
+        <div class="cards-section" id="quadCards"></div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div class="tab-pane" id="tab-map">
+      <div class="section">
+        <div class="map-kpi-row" id="mapKpis"></div>
+        <div class="map-container">
+          <div id="map-svg-container"><div style="text-align:center;padding:80px 0;color:var(--text3);font-size:13px;">Loading map — requires internet connection</div></div>
+          <div class="map-tooltip" id="mapTooltip"></div>
+          <div class="map-legend">
+            <span class="map-legend-label">0%</span>
+            <div id="legendScale" style="display:flex;"></div>
+            <span class="map-legend-label" id="legendMax">70%+ LTA</span>
+            <span style="margin-left:14px;font-size:11px;color:var(--text3);">Dark gray = no data</span>
+          </div>
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-header">
+            <div class="slider-inner">
+              <div><div class="slider-sub">Viewing LTA% for</div><div class="slider-month" id="sliderMonthLabel">March 2026</div></div>
+              <input type="range" id="monthSlider" min="0" max="5" step="1" value="5" oninput="onSliderChange(this.value)">
+              <div class="slider-ticks" id="sliderTicks"></div>
+            </div>
+            <button class="play-btn" id="playBtn" onclick="togglePlay()">&#9654; Play timeline</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="tab-pane" id="tab-table">
+      <!-- Sub-nav -->
+      <div style="display:flex;gap:2px;background:var(--bg3);border-radius:8px;padding:3px;margin-bottom:18px;width:fit-content;">
+        <button class="ctrl-btn active" id="subtab-btn-breakdown" onclick="switchSubTab('breakdown')">Full breakdown</button>
+        <button class="ctrl-btn" id="subtab-btn-mom" onclick="switchSubTab('mom')">Month on month</button>
+      </div>
+
+      <!-- Sub-tab: Full breakdown -->
+      <div id="subtab-breakdown">
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Full state breakdown</div>
+            <div class="controls" id="tableCtrls"></div>
+          </div>
+          <div class="table-wrap"><table><thead><tr id="tableHead"></tr></thead><tbody id="tableBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- Sub-tab: Month on Month -->
+      <div id="subtab-mom" style="display:none;">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+          <!-- Period selectors -->
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);">
+              <span>Current:</span>
+              <select class="ctrl-select" id="momMonthA" onchange="renderMoM()">
+                <option value="5">Apr 2026</option>
+                <option value="4" selected>Mar 2026</option>
+                <option value="3">Feb 2026</option>
+                <option value="2">Jan 2026</option>
+                <option value="1">Dec 2025</option>
+                <option value="0">Nov 2025</option>
+              </select>
+            </div>
+            <span style="color:var(--text3);font-size:13px;">vs</span>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);">
+              <span>Previous:</span>
+              <select class="ctrl-select" id="momMonthB" onchange="renderMoM()">
+                <option value="5">Apr 2026</option>
+                <option value="4">Mar 2026</option>
+                <option value="3" selected>Feb 2026</option>
+                <option value="2">Jan 2026</option>
+                <option value="1">Dec 2025</option>
+                <option value="0">Nov 2025</option>
+              </select>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:8px;">
+              <button class="ctrl-btn" onclick="setMoMPreset(4,3)">Mar vs Feb</button>
+              <button class="ctrl-btn" onclick="setMoMPreset(3,2)">Feb vs Jan</button>
+              <button class="ctrl-btn" onclick="setMoMPreset(2,1)">Jan vs Dec</button>
+            </div>
+          </div>
+          <!-- Summary KPIs -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;" id="momKpis"></div>
+        </div>
+        <!-- Charts row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:14px;">Leads — current vs previous</div>
+            <div style="display:flex;gap:14px;margin-bottom:10px;font-size:11px;color:var(--text3);" id="momLeadLegend"></div>
+            <div style="position:relative;height:300px;"><canvas id="momLeadsChart"></canvas></div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:14px;">LTA% — current vs previous</div>
+            <div style="display:flex;gap:14px;margin-bottom:10px;font-size:11px;color:var(--text3);" id="momLtaLegend"></div>
+            <div style="position:relative;height:300px;"><canvas id="momLtaChart"></canvas></div>
+          </div>
+        </div>
+        <!-- MoM table -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title" id="momTableTitle">State comparison</div>
+            <div class="controls">
+              <button class="ctrl-btn active" id="momSort-leads" onclick="setMoMSort('leads',event)">Sort: Leads Δ</button>
+              <button class="ctrl-btn" id="momSort-lta" onclick="setMoMSort('lta',event)">Sort: LTA% Δ</button>
+              <button class="ctrl-btn" id="momSort-abs" onclick="setMoMSort('abs',event)">Sort: Leads (cur)</button>
+            </div>
+          </div>
+          <div class="table-wrap" style="overflow-x:auto;">
+            <table>
+              <thead><tr>
+                <th>State</th>
+                <th id="momHeadA">Current</th><th>Leads</th><th>LTA%</th><th>Activated</th>
+                <th id="momHeadB">Previous</th><th>Leads</th><th>LTA%</th><th>Activated</th>
+                <th>Leads Δ</th><th>LTA% Δ</th><th>Signal</th>
+              </tr></thead>
+              <tbody id="momBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VOLUME -->
+    <div class="tab-pane" id="tab-volume">
+      <div class="section">
+        <div class="section-header"><div class="section-title" id="volTitle1">Overall lead volume</div></div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;">
+          <div style="position:relative;height:180px;"><canvas id="totalVolChart"></canvas></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">Overall LTA% trend</div></div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;">
+          <div style="position:relative;height:160px;"><canvas id="ltaTrendChart"></canvas></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">Top states — monthly volume</div></div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;">
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:var(--text3);" id="volLegend"></div>
+          <div style="position:relative;height:260px;"><canvas id="topVolChart"></canvas></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title" id="gemTitle">High LTA% states</div></div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;">
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:var(--text3);" id="gemLegend"></div>
+          <div style="position:relative;height:220px;"><canvas id="gemVolChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUDGET MODELLER -->
+    <div class="tab-pane" id="tab-budget">
+      <div class="bm-controls">
+        <div class="bm-slider-row">
+          <div class="bm-slider-label">Monthly Google budget</div>
+          <input type="range" id="budgetSlider" min="50000" max="100000" step="1000" value="76400" oninput="runBudgetModel()" style="flex:1;">
+          <div class="bm-slider-val" id="budgetSliderVal">$76,400</div>
+        </div>
+        <div class="bm-target-row">
+          <div class="target-badge"><div class="target-dot"></div>Target: 5.0% national blended LTA%</div>
+          <span style="font-size:11px;color:var(--text3);margin-left:8px;">Budget distributed to states with LTA% ≥ 5%, weighted by efficiency. Edit any state's allocation below to override.</span>
+        </div>
+      </div>
+      <div class="bm-header" id="bmKpis"></div>
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">State budget allocation</div>
+          <div class="controls">
+            <button class="ctrl-btn active" id="bmSortLTA" onclick="setBMSort('lta')">Sort: LTA%</button>
+            <button class="ctrl-btn" id="bmSortSpend" onclick="setBMSort('spend')">Sort: Spend</button>
+            <button class="ctrl-btn" id="bmSortSubs" onclick="setBMSort('subs')">Sort: Subscribers</button>
+            <button class="reset-btn" onclick="resetOverrides()">Reset overrides</button>
+          </div>
+        </div>
+        <div class="bm-table-wrap">
+          <table>
+            <thead><tr>
+              <th>State</th><th>Grand LTA%</th><th>Current spend</th>
+              <th>Recommended</th><th>Allocation</th><th>Change</th>
+              <th>Proj. subscribers</th><th>Status</th><th>Override</th>
+            </tr></thead>
+            <tbody id="bmTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section" style="margin-top:8px;">
+        <div class="section-header"><div class="section-title">Spend distribution — current vs recommended</div></div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;">
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:11px;color:var(--text3);">
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:2px;background:#555c67;"></span>Current</span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--green);"></span>Recommended</span>
+          </div>
+          <div style="position:relative;height:360px;"><canvas id="bmCompareChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAMPAIGNS -->
+    <div class="tab-pane" id="tab-campaigns">
+      <div id="uploadArea">
+        <div class="upload-zone" id="uploadZone">
+          <svg class="upload-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 26V14M14 20l6-6 6 6M8 30a8 8 0 01-2-5.5C6 19.7 9.7 16 14.2 16c.4 0 .8 0 1.2.1A9 9 0 0132 20a7 7 0 010 14H8z"/>
+          </svg>
+          <div class="upload-title">Drop your Google Ads CSV export here</div>
+          <div class="upload-sub">Standard campaign report or segmented-by-time report for period comparison</div>
+          <label class="upload-btn-label">Browse file<input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleFile(this.files[0])"></label>
+          <div style="margin-top:20px;background:var(--bg3);border-radius:8px;padding:12px 16px;text-align:left;max-width:500px;margin-left:auto;margin-right:auto;">
+            <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:8px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;">Required CSV columns</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.9;">
+              Campaign · Clicks · Impr. · CTR · Avg. CPC · Cost · Conversions · Conv. rate<br>
+              <span style="color:var(--amber);">+ Day / Week / Month</span> <span style="color:var(--text3);">— add this to unlock period comparison</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">To add a date column in Google Ads: Campaigns report → <strong style="color:var(--text2);">Segment</strong> → <strong style="color:var(--text2);">Time</strong> → <strong style="color:var(--text2);">Day</strong> (or Week / Month) → Download CSV</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="campData" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:13px;color:var(--text2);">Loaded: <span id="campFileName" style="color:var(--text);font-weight:500;"></span> <span id="campDateRangeLabel" style="color:var(--text3);font-size:11px;font-family:var(--mono);margin-left:8px;"></span></div>
+          <button class="reset-btn" onclick="resetCampaigns()">Upload new file</button>
+        </div>
+
+        <!-- No dates notice -->
+        <div class="no-dates-notice" id="noDatesNotice" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#f0a442" stroke-width="1.5" style="flex-shrink:0;margin-top:1px;"><circle cx="9" cy="9" r="7"/><line x1="9" y1="6" x2="9" y2="9.5"/><circle cx="9" cy="12" r="0.6" fill="#f0a442"/></svg>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--amber);margin-bottom:3px;">Period comparison unavailable — no date column detected</div>
+            <div style="font-size:12px;color:var(--text2);">To enable Day on Day, Week on Week and Month on Month comparison, re-export from Google Ads with a time segment: <strong>Campaigns report → Segment → Time → Day → Download CSV</strong>. This adds a "Day" column and unlocks the comparison section below.</div>
+          </div>
+        </div>
+
+        <!-- Period comparison section - only shown when date data detected -->
+        <div id="periodSection" style="display:none;margin-bottom:20px;">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+              <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);">Period comparison</div>
+              <div class="period-mode-bar">
+                <button class="period-mode-btn active" id="mode-dod" onclick="setPeriodMode('dod')">Day on Day</button>
+                <button class="period-mode-btn" id="mode-wow" onclick="setPeriodMode('wow')">Week on Week</button>
+                <button class="period-mode-btn" id="mode-mom" onclick="setPeriodMode('mom')">Month on Month</button>
+                <button class="period-mode-btn" id="mode-custom" onclick="setPeriodMode('custom')">Custom</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+              <span class="period-badge period-a-badge">Current: <span id="periodALabel" style="margin-left:4px;">—</span></span>
+              <span style="color:var(--text3);font-size:12px;">vs</span>
+              <span class="period-badge period-b-badge">Previous: <span id="periodBLabel" style="margin-left:4px;">—</span></span>
+            </div>
+            <div id="customDateInputs" style="display:none;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;font-size:12px;color:var(--text2);">
+              <span>Current:</span>
+              <input type="date" class="date-input" id="customAStart">
+              <span>to</span>
+              <input type="date" class="date-input" id="customAEnd">
+              <span style="margin:0 6px;color:var(--text3);">vs</span>
+              <span>Previous:</span>
+              <input type="date" class="date-input" id="customBStart">
+              <span>to</span>
+              <input type="date" class="date-input" id="customBEnd">
+              <button class="ctrl-btn" onclick="runComparison()" style="margin-left:4px;">Compare ↗</button>
+            </div>
+            <div class="comp-kpi-grid" id="compKpis"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+              <div style="font-size:12px;font-weight:500;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em;">Trend</div>
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><span style="display:inline-block;width:20px;height:2px;background:var(--green);"></span>Current</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><span style="display:inline-block;width:20px;border-top:2px dashed #555c67;"></span>Previous</div>
+                <select class="ctrl-select" id="trendMetric" onchange="runComparison()">
+                  <option value="cost">Spend</option>
+                  <option value="clicks">Clicks</option>
+                  <option value="conv">Conversions</option>
+                  <option value="ctr">CTR</option>
+                </select>
+              </div>
+            </div>
+            <div style="position:relative;height:200px;"><canvas id="trendChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Standard overview -->
+        <div class="camp-summary" id="campKpis" style="grid-template-columns:repeat(6,1fr);"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:14px;">Top campaigns by spend</div>
+            <div style="position:relative;height:280px;"><canvas id="campSpendChart"></canvas></div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:14px;">Spend by campaign type</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:var(--text3);" id="typeChartLegend"></div>
+            <div style="position:relative;height:240px;"><canvas id="campTypeChart"></canvas></div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+          <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:14px;">Spend by state</div>
+          <div style="position:relative;height:200px;"><canvas id="campStateChart"></canvas></div>
+        </div>
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title" id="campTableTitle">All campaigns</div>
+            <div class="camp-controls">
+              <input type="text" class="camp-search" id="campSearch" placeholder="Search campaign, state or type..." oninput="filterCampTable()">
+              <select class="ctrl-select" id="campTypeFilter" onchange="filterCampTable()">
+                <option value="all">All types</option>
+                <option value="Brand">Brand</option>
+                <option value="Generic">Generic</option>
+                <option value="Business Search">Business Search</option>
+                <option value="Competitor">Competitor</option>
+              </select>
+              <select class="ctrl-select" id="campSortCol" onchange="filterCampTable()">
+                <option value="cost">Sort: Cost</option>
+                <option value="clicks">Sort: Clicks</option>
+                <option value="conv">Sort: Conversions</option>
+                <option value="ctr">Sort: CTR</option>
+                <option value="cpc">Sort: Avg CPC</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap" style="overflow-x:auto;">
+            <table><thead><tr id="campHead"></tr></thead><tbody id="campBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPRESSION SHARE TAB -->
+    <div class="tab-pane" id="tab-is">
+      <!-- No data state -->
+      <div id="isNoData" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:48px 32px;text-align:center;">
+        <div style="width:44px;height:44px;margin:0 auto 16px;background:rgba(167,139,250,0.12);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#a78bfa" stroke-width="1.5"><circle cx="11" cy="11" r="9"/><path d="M11 7v4.5M11 15h.01"/></svg>
+        </div>
+        <div style="font-size:15px;font-weight:500;color:var(--text2);margin-bottom:8px;">No impression share data loaded</div>
+        <div style="font-size:12px;color:var(--text3);max-width:460px;margin:0 auto 16px;line-height:1.7;">Upload a Google Ads CSV that includes IS columns to unlock this view. In Google Ads: <strong style="color:var(--text2);">Campaigns → Columns → Competitive metrics</strong> → add Search impr. share, Search lost IS (budget) and Search lost IS (rank).</div>
+        <button class="ctrl-btn" onclick="showTab('campaigns')" style="font-size:12px;padding:8px 18px;">Go to Campaigns ↗</button>
+      </div>
+
+      <!-- IS data view -->
+      <div id="isDataView" style="display:none;">
+        <!-- KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;" id="isKpis"></div>
+        <!-- Brand alert -->
+        <div id="brandIsAlert" style="display:none;background:var(--red-dim);border:1px solid rgba(240,82,82,0.2);border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:12px;color:var(--red);line-height:1.7;"></div>
+
+        <!-- Charts row: stacked breakdown + opportunity matrix -->
+        <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:20px;">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:10px;">IS breakdown by campaign</div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--text3);" id="isBreakdownLegend"></div>
+            <div id="isBreakdownWrap" style="position:relative;height:360px;"><canvas id="isBreakdownChart"></canvas></div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:10px;">Opportunity matrix</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--text3);" id="isMatrixLegend"></div>
+            <div style="position:relative;height:340px;"><canvas id="isOpportunityChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- IS State Map -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);">Search IS by state</div>
+            <div style="font-size:11px;color:var(--text3);" id="isMapSubtitle">Weighted average across all campaigns</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;" id="isMapKpis"></div>
+          <div id="is-map-svg-container" style="min-height:160px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;">Loading map…</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:var(--text3);font-family:var(--mono);">0%</span>
+            <div id="isMapLegendScale" style="display:flex;"></div>
+            <span style="font-size:11px;color:var(--text3);font-family:var(--mono);">100% IS</span>
+            <span style="margin-left:14px;font-size:11px;color:var(--text3);">Dark = no campaign data for this state</span>
+          </div>
+          <!-- Time slider — only visible when dated IS data available -->
+          <div id="isTimeSlider" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-top:18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;">
+              <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+                <div>
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">Viewing IS for</div>
+                  <div style="font-size:19px;font-weight:500;font-family:var(--mono);color:#a78bfa;" id="isSliderLabel">—</div>
+                </div>
+                <input type="range" id="isMapSlider" min="0" max="0" step="1" value="0" oninput="updateISMap(+this.value)" style="accent-color:#a78bfa;">
+                <div style="display:flex;justify-content:space-between;" id="isSliderTicks"></div>
+              </div>
+              <button id="isPlayBtn" onclick="toggleISPlay()" style="background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:9px 16px;font-size:12px;color:#a78bfa;cursor:pointer;font-family:var(--font);white-space:nowrap;flex-shrink:0;">&#9654; Play</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PACING TAB -->
+    <div class="tab-pane" id="tab-pacing">
+
+      <!-- ─── BUDGET SETUP ─── -->
+      <div id="pacingBudgetSetup" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);">Monthly budget configuration</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;">Set once per month · auto-saved in your browser</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select class="ctrl-select" id="budgetMonth" onchange="updateBudgetMonth()">
+              <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option>
+              <option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option>
+              <option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option>
+              <option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+            </select>
+            <select class="ctrl-select" id="budgetYear"><option value="2026">2026</option><option value="2027">2027</option></select>
+            <button class="ctrl-btn active" onclick="saveBudgets()">Save budgets</button>
+            <button class="ctrl-btn" onclick="toggleBudgetEdit()">Edit</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left;padding:8px 12px;font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;font-weight:400;">Market</th>
+                <th style="text-align:right;padding:8px 12px;font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;font-weight:400;">Google budget</th>
+                <th style="text-align:right;padding:8px 12px;font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;font-weight:400;">Meta budget</th>
+                <th style="text-align:right;padding:8px 12px;font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;font-weight:400;">Bing budget</th>
+                <th style="text-align:right;padding:8px 12px;font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;font-weight:400;">Total</th>
+              </tr>
+            </thead>
+            <tbody id="budgetTableBody"></tbody>
+            <tfoot>
+              <tr style="border-top:1px solid var(--border2);">
+                <td style="padding:8px 12px;font-weight:500;color:var(--text);">Portfolio total</td>
+                <td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--green);" id="budgetTotalGoogle">$0</td>
+                <td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--blue);" id="budgetTotalMeta">$0</td>
+                <td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:11px;color:#6488ff;" id="budgetTotalBing">$0</td>
+                <td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text);" id="budgetTotalAll">$0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── IMPORT ZONE ─── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;" id="platformImportGrid">
+        <div class="bm-kpi" id="piGoogle" style="border:2px dashed var(--border2);cursor:pointer;transition:all 0.2s;"
+          ondragover="event.preventDefault();this.style.borderColor='#2ecc8a'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handlePlatformDrop(event.dataTransfer.files,'google')">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#2ecc8a;flex-shrink:0;"></div>
+            <div class="bm-kpi-label" style="margin:0;">Google Ads</div>
+          </div>
+          <div class="bm-kpi-val" id="piStatus-google" style="font-size:13px;color:var(--text3);">Not loaded</div>
+          <div id="piYest-google" style="display:none;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px;"></div>
+          <div class="bm-kpi-sub" style="margin-top:6px;">Drop CSV or <label style="color:var(--green);cursor:pointer;text-decoration:underline;">browse<input type="file" accept=".csv" style="display:none;" onchange="handlePlatformDrop(this.files,'google')"></label></div>
+        </div>
+        <div class="bm-kpi" id="piMeta" style="border:2px dashed var(--border2);cursor:pointer;transition:all 0.2s;"
+          ondragover="event.preventDefault();this.style.borderColor='#4da6ff'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handlePlatformDrop(event.dataTransfer.files,'meta')">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#4da6ff;flex-shrink:0;"></div>
+            <div class="bm-kpi-label" style="margin:0;">Meta Ads</div>
+          </div>
+          <div class="bm-kpi-val" id="piStatus-meta" style="font-size:13px;color:var(--text3);">Not loaded</div>
+          <div id="piYest-meta" style="display:none;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px;"></div>
+          <div class="bm-kpi-sub" style="margin-top:6px;">Drop CSV or <label style="color:var(--blue);cursor:pointer;text-decoration:underline;">browse<input type="file" accept=".csv" style="display:none;" onchange="handlePlatformDrop(this.files,'meta')"></label></div>
+        </div>
+        <div class="bm-kpi" id="piBing" style="border:2px dashed var(--border2);cursor:pointer;transition:all 0.2s;"
+          ondragover="event.preventDefault();this.style.borderColor='#6488ff'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handlePlatformDrop(event.dataTransfer.files,'bing')">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#6488ff;flex-shrink:0;"></div>
+            <div class="bm-kpi-label" style="margin:0;">Bing / Microsoft</div>
+          </div>
+          <div class="bm-kpi-val" id="piStatus-bing" style="font-size:13px;color:var(--text3);">Not loaded</div>
+          <div id="piYest-bing" style="display:none;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:4px;"></div>
+          <div class="bm-kpi-sub" style="margin-top:6px;">Drop CSV or <label style="color:#6488ff;cursor:pointer;text-decoration:underline;">browse<input type="file" accept=".csv" style="display:none;" onchange="handlePlatformDrop(this.files,'bing')"></label></div>
+        </div>
+      </div>
+
+      <!-- ─── PACING DASHBOARD ─── -->
+      <div id="pacingDashboard" style="display:none;">
+
+        <!-- Date context bar -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);">
+            <span>Date range:</span>
+            <input type="date" class="date-input" id="pacingDateFrom" onchange="recalcPacing()">
+            <span>to</span>
+            <input type="date" class="date-input" id="pacingDateTo" onchange="recalcPacing()">
+          </div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);" id="pacingDateContext"></div>
+          <button class="reset-btn" onclick="resetPlatformData()" style="margin-left:auto;">Clear all data</button>
+        </div>
+
+        <!-- KPI strip -->
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px;" id="pacingKpis"></div>
+
+        <!-- Sub views -->
+        <div style="display:flex;gap:2px;background:var(--bg3);border-radius:8px;padding:3px;margin-bottom:18px;width:fit-content;">
+          <button class="ctrl-btn active" id="pview-market" onclick="setPacingView('market')">By market</button>
+          <button class="ctrl-btn" id="pview-channel" onclick="setPacingView('channel')">By channel</button>
+        </div>
+
+        <!-- Market view -->
+        <div id="pacingMarketView">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:14px;">Portfolio pacing — MTD spend vs budget by market</div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:var(--text3);">
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#2ecc8a88;"></span>Google</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#4da6ff88;"></span>Meta</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#6488ff88;"></span>Bing</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#555c67;"></span>Budget</span>
+            </div>
+            <div style="position:relative;height:300px;"><canvas id="marketPacingChart"></canvas></div>
+          </div>
+          <div class="section">
+            <div class="section-header">
+              <div class="section-title" id="marketTableTitle">Market breakdown</div>
+              <div class="controls">
+                <button class="ctrl-btn active" id="mpsort-var" onclick="setMarketSort('var',event)">Sort: Variance</button>
+                <button class="ctrl-btn" id="mpsort-spend" onclick="setMarketSort('spend',event)">Sort: Spend</button>
+                <button class="ctrl-btn" id="mpsort-pct" onclick="setMarketSort('pct',event)">Sort: % paced</button>
+                <button class="ctrl-btn" id="mpsort-alpha" onclick="setMarketSort('alpha',event)">Sort: Market</button>
+              </div>
+            </div>
+            <div class="table-wrap" style="overflow-x:auto;">
+              <table>
+                <thead><tr>
+                  <th>Market</th>
+                  <th>Google spend</th><th>Meta spend</th><th>Bing spend</th>
+                  <th>Total MTD</th><th>Yesterday spend</th>
+                  <th>Total budget</th><th>% paced</th>
+                  <th>Rec. MTD spend</th><th>Variance</th>
+                  <th>Daily needed</th><th>Budget action</th><th>Status</th>
+                </tr></thead>
+                <tbody id="marketPacingBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Channel view -->
+        <div id="pacingChannelView" style="display:none;">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px;" id="channelKpiCards"></div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:18px;">
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+              <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:14px;">MTD spend by channel — top markets</div>
+              <div style="position:relative;height:280px;"><canvas id="channelStackChart"></canvas></div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+              <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:14px;">Channel mix</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--text3);" id="channelMixLegend"></div>
+              <div style="position:relative;height:230px;"><canvas id="channelMixChart"></canvas></div>
+            </div>
+          </div>
+          <div class="table-wrap" style="overflow-x:auto;">
+            <table>
+              <thead><tr>
+                <th>Market</th>
+                <th>Google spend</th><th>Google yest.</th><th>Google budget</th><th>Google %</th><th>Google var</th><th>Google action</th>
+                <th>Meta spend</th><th>Meta yest.</th><th>Meta budget</th><th>Meta %</th><th>Meta var</th><th>Meta action</th>
+                <th>Bing spend</th><th>Bing yest.</th><th>Bing budget</th><th>Bing %</th><th>Bing var</th><th>Bing action</th>
+              </tr></thead>
+              <tbody id="channelPacingBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- end pacingDashboard -->
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ═══════════════════ PAID DATA ═══════════════════ */
+const PAID_STATES=[
+  /* ── Scale now ── */
+  {state:'California',   lta:5.89, volTrend:4,gSpend:11524,signups:560,subs:33,marLeads:135,marLTA:5.19, cps:1644,quad:'scale',  volData:[78,63,139,114,135,31]},
+  {state:'Florida',      lta:6.21, volTrend:4,gSpend:11569,signups:515,subs:32,marLeads:133,marLTA:8.27, cps:1052,quad:'scale',  volData:[50,52,140,104,133,36]},
+  {state:'Maryland',     lta:8.43, volTrend:3,gSpend:516,  signups:83, subs:7, marLeads:18, marLTA:5.56, cps:516, quad:'scale',  volData:[10,16,20,19,18,0]},
+  {state:'Nevada',       lta:7.14, volTrend:3,gSpend:299,  signups:42, subs:3, marLeads:13, marLTA:15.38,cps:150, quad:'scale',  volData:[2,11,6,9,13,1]},
+  {state:'Utah',         lta:6.67, volTrend:3,gSpend:364,  signups:45, subs:3, marLeads:10, marLTA:10.00,cps:364, quad:'scale',  volData:[9,2,9,11,10,4]},
+  {state:'New York',     lta:5.06, volTrend:3,gSpend:11136,signups:415,subs:21,marLeads:103,marLTA:2.91, cps:3712,quad:'scale',  volData:[26,39,120,106,103,21]},
+  /* ── Nurture ── */
+  {state:'Wisconsin',    lta:9.52, volTrend:3,gSpend:335,  signups:42, subs:4, marLeads:12, marLTA:0,    cps:null,quad:'nurture',volData:[5,7,8,10,12,0]},
+  {state:'Iowa',         lta:12.50,volTrend:1,gSpend:167,  signups:16, subs:2, marLeads:3,  marLTA:0,    cps:null,quad:'nurture',volData:[2,2,2,5,3,2]},
+  {state:'New Mexico',   lta:9.09, volTrend:2,gSpend:87,   signups:22, subs:2, marLeads:4,  marLTA:0,    cps:null,quad:'nurture',volData:[2,2,5,7,4,2]},
+  {state:'Maine',        lta:7.69, volTrend:1,gSpend:280,  signups:13, subs:1, marLeads:4,  marLTA:0,    cps:null,quad:'nurture',volData:[0,4,4,1,4,0]},
+  /* ── Fix funnel ── */
+  {state:'Texas',        lta:3.23, volTrend:4,gSpend:11165,signups:496,subs:16,marLeads:126,marLTA:5.56, cps:1595,quad:'fix',    volData:[44,57,129,102,126,38]},
+  {state:'Georgia',      lta:2.35, volTrend:4,gSpend:2346, signups:170,subs:4, marLeads:45, marLTA:4.44, cps:1173,quad:'fix',    volData:[19,18,37,41,45,10]},
+  {state:'Ohio',         lta:1.32, volTrend:4,gSpend:1228, signups:152,subs:2, marLeads:46, marLTA:4.35, cps:614, quad:'fix',    volData:[6,12,36,44,46,8]},
+  {state:'Indiana',      lta:3.39, volTrend:4,gSpend:599,  signups:59, subs:2, marLeads:21, marLTA:4.76, cps:599, quad:'fix',    volData:[3,7,9,17,21,2]},
+  {state:'Virginia',     lta:4.14, volTrend:3,gSpend:1031, signups:145,subs:6, marLeads:31, marLTA:9.68, cps:344, quad:'fix',    volData:[7,14,34,55,31,4]},
+  {state:'Michigan',     lta:2.25, volTrend:3,gSpend:1171, signups:178,subs:4, marLeads:24, marLTA:8.33, cps:586, quad:'fix',    volData:[4,10,73,59,24,8]},
+  {state:'Washington',   lta:2.94, volTrend:3,gSpend:473,  signups:68, subs:2, marLeads:22, marLTA:4.55, cps:473, quad:'fix',    volData:[4,3,18,20,22,1]},
+  {state:'Tennessee',    lta:2.22, volTrend:3,gSpend:680,  signups:90, subs:2, marLeads:21, marLTA:0,    cps:null,quad:'fix',    volData:[6,6,29,24,21,4]},
+  {state:'Colorado',     lta:3.33, volTrend:3,gSpend:271,  signups:60, subs:2, marLeads:10, marLTA:0,    cps:null,quad:'fix',    volData:[2,4,13,23,10,8]},
+  {state:'South Carolina',lta:1.54,volTrend:3,gSpend:958,  signups:65, subs:1, marLeads:22, marLTA:4.55, cps:958, quad:'fix',    volData:[4,11,21,7,22,0]},
+  {state:'Massachusetts', lta:2.80,volTrend:3,gSpend:755,  signups:143,subs:4, marLeads:22, marLTA:4.55, cps:754, quad:'fix',    volData:[7,9,65,35,22,5]},
+  {state:'Oklahoma',     lta:1.75, volTrend:3,gSpend:352,  signups:57, subs:1, marLeads:13, marLTA:7.69, cps:352, quad:'fix',    volData:[6,7,14,13,13,4]},
+  {state:'Minnesota',    lta:2.78, volTrend:3,gSpend:325,  signups:36, subs:1, marLeads:13, marLTA:7.69, cps:325, quad:'fix',    volData:[4,2,7,7,13,3]},
+  {state:'Arkansas',     lta:2.70, volTrend:3,gSpend:221,  signups:37, subs:1, marLeads:9,  marLTA:11.11,cps:221, quad:'fix',    volData:[5,6,10,6,9,1]},
+  {state:'Rhode Island', lta:4.55, volTrend:3,gSpend:118,  signups:22, subs:1, marLeads:7,  marLTA:14.29,cps:118, quad:'fix',    volData:[1,1,6,7,7,0]},
+  {state:'Louisiana',    lta:3.51, volTrend:2,gSpend:636,  signups:57, subs:2, marLeads:8,  marLTA:0,    cps:null,quad:'fix',    volData:[4,5,21,15,8,4]},
+  {state:'Delaware',     lta:4.76, volTrend:2,gSpend:94,   signups:21, subs:1, marLeads:8,  marLTA:12.50,cps:94,  quad:'fix',    volData:[6,0,3,4,8,0]},
+  /* ── Pause / cut ── */
+  {state:'New Jersey',   lta:2.45, volTrend:2,gSpend:1192, signups:245,subs:6, marLeads:45, marLTA:4.44, cps:596, quad:'pause',  volData:[19,23,90,62,45,6]},
+  {state:'Illinois',     lta:2.17, volTrend:2,gSpend:1185, signups:230,subs:5, marLeads:33, marLTA:3.03, cps:1185,quad:'pause',  volData:[12,10,88,76,33,11]},
+  {state:'Pennsylvania', lta:1.24, volTrend:2,gSpend:1446, signups:241,subs:3, marLeads:36, marLTA:0,    cps:null,quad:'pause',  volData:[28,18,85,67,36,7]},
+  {state:'North Carolina',lta:0.62,volTrend:2,gSpend:1105, signups:162,subs:1, marLeads:33, marLTA:0,    cps:null,quad:'pause',  volData:[12,14,49,47,33,7]},
+  {state:'Arizona',      lta:2.00, volTrend:3,gSpend:608,  signups:100,subs:2, marLeads:28, marLTA:0,    cps:null,quad:'pause',  volData:[19,6,26,14,28,7]},
+  {state:'Connecticut',  lta:0,    volTrend:3,gSpend:412,  signups:43, subs:0, marLeads:11, marLTA:0,    cps:null,quad:'pause',  volData:[7,5,12,8,11,0]},
+  {state:'Missouri',     lta:0,    volTrend:2,gSpend:398,  signups:70, subs:0, marLeads:14, marLTA:0,    cps:null,quad:'pause',  volData:[6,6,20,19,14,5]},
+  {state:'Alabama',      lta:0,    volTrend:3,gSpend:836,  signups:77, subs:0, marLeads:22, marLTA:0,    cps:null,quad:'pause',  volData:[4,9,23,15,22,4]},
+  {state:'Kentucky',     lta:0,    volTrend:3,gSpend:398,  signups:44, subs:0, marLeads:13, marLTA:0,    cps:null,quad:'pause',  volData:[3,1,10,14,13,3]},
+  {state:'Oregon',       lta:0,    volTrend:2,gSpend:193,  signups:23, subs:0, marLeads:4,  marLTA:0,    cps:null,quad:'pause',  volData:[0,3,8,6,4,2]},
+  {state:'Mississippi',  lta:0,    volTrend:2,gSpend:284,  signups:28, subs:0, marLeads:4,  marLTA:0,    cps:null,quad:'pause',  volData:[4,2,12,5,4,1]},
+];
+const PAID_LTA={
+  'Alabama':        [0,    0,     0,    0,    0,     0   ],
+  'Alaska':         [0,    0,     0,    0,    0,     0   ],
+  'Arizona':        [5.26, 0,     3.85, 0,    0,     0   ],
+  'Arkansas':       [0,    0,     0,    0,    11.11, 0   ],
+  'California':     [6.41, 11.11, 5.04, 5.26, 5.19, 3.23],
+  'Colorado':       [0,    0,     0,    8.70, 0,     0   ],
+  'Connecticut':    [0,    0,     0,    0,    0,     0   ],
+  'Delaware':       [0,    0,     0,    0,    12.50, 0   ],
+  'District of Columbia':[0,0,   0,    0,    0,     0   ],
+  'Florida':        [10.00,11.54, 2.14, 6.73, 8.27, 0   ],
+  'Georgia':        [5.26, 0,     0,    2.44, 4.44, 0   ],
+  'Hawaii':         [0,    0,     0,    0,    0,     0   ],
+  'Idaho':          [0,    0,     0,    0,    0,     0   ],
+  'Illinois':       [8.33, 0,     1.14, 2.63, 3.03, 0   ],
+  'Indiana':        [0,    0,     11.11,0,    4.76, 0   ],
+  'Iowa':           [0,    50.00, 0,    20.00,0,     0   ],
+  'Kansas':         [0,    0,     0,    0,    0,     0   ],
+  'Kentucky':       [0,    0,     0,    0,    0,     0   ],
+  'Louisiana':      [0,    0,     4.76, 6.67, 0,     0   ],
+  'Maine':          [0,    25.00, 0,    0,    0,     0   ],
+  'Maryland':       [20.00,18.75, 0,    5.26, 5.56, 0   ],
+  'Massachusetts':  [0,    11.11, 3.08, 0,    4.55, 0   ],
+  'Michigan':       [0,    0,     1.37, 1.69, 8.33, 0   ],
+  'Minnesota':      [0,    0,     0,    0,    7.69, 0   ],
+  'Mississippi':    [0,    0,     0,    0,    0,     0   ],
+  'Missouri':       [0,    0,     0,    0,    0,     0   ],
+  'Montana':        [0,    0,     0,    0,    0,     0   ],
+  'Nebraska':       [0,    0,     0,    0,    0,     0   ],
+  'Nevada':         [0,    0,     0,    11.11,15.38, 0   ],
+  'New Hampshire':  [0,    0,     0,    0,    0,     0   ],
+  'New Jersey':     [0,    4.35,  3.33, 0,    4.44, 0   ],
+  'New Mexico':     [50.00,0,     0,    14.29,0,     0   ],
+  'New York':       [3.85, 12.82, 1.67, 9.43, 2.91, 0   ],
+  'North Carolina': [0,    0,     0,    2.13, 0,     0   ],
+  'North Dakota':   [0,    0,     0,    0,    0,     0   ],
+  'Ohio':           [0,    0,     0,    0,    4.35, 0   ],
+  'Oklahoma':       [0,    0,     0,    0,    7.69, 0   ],
+  'Oregon':         [0,    0,     0,    0,    0,     0   ],
+  'Pennsylvania':   [7.14, 5.56,  0,    0,    0,     0   ],
+  'Rhode Island':   [0,    0,     0,    0,    14.29, 0   ],
+  'South Carolina': [0,    0,     0,    0,    4.55, 0   ],
+  'South Dakota':   [0,    0,     0,    0,    0,     0   ],
+  'Tennessee':      [33.33,0,     0,    0,    0,     0   ],
+  'Texas':          [0,    7.02,  1.55, 2.94, 5.56, 0   ],
+  'Utah':           [11.11,0,     11.11,0,    10.00, 0   ],
+  'Vermont':        [0,    0,     0,    0,    0,     0   ],
+  'Virginia':       [0,    0,     0,    5.45, 9.68, 0   ],
+  'Washington':     [0,    0,     0,    5.00, 4.55, 0   ],
+  'West Virginia':  [0,    0,     0,    0,    0,     0   ],
+  'Wisconsin':      [20.00,14.29, 25.00,0,    0,     0   ],
+  'Wyoming':        [0,    0,     0,    0,    0,     0   ],
+};
+
+/* ═══════════════════ ORGANIC DATA ═══════════════════ */
+const ORGANIC_STATES=[
+  {state:'Florida',      lta:10.68,volTrend:5,totalLeads:1311,totalActivated:140,marLeads:296,marLTA:7.43, marActivated:22,quad:'scale',volData:[202,242,294,277,296]},
+  {state:'California',   lta:8.92, volTrend:4,totalLeads:1189,totalActivated:106,marLeads:265,marLTA:4.53, marActivated:12,quad:'fix',  volData:[168,205,283,268,265]},
+  {state:'Texas',        lta:7.18, volTrend:4,totalLeads:891, totalActivated:64, marLeads:176,marLTA:4.55, marActivated:8, quad:'fix',  volData:[151,145,230,189,176]},
+  {state:'New York',     lta:7.84, volTrend:5,totalLeads:842, totalActivated:66, marLeads:199,marLTA:6.53, marActivated:13,quad:'fix',  volData:[155,140,173,175,199]},
+  {state:'Illinois',     lta:10.71,volTrend:4,totalLeads:364, totalActivated:39, marLeads:92, marLTA:8.70, marActivated:8, quad:'scale',volData:[52,50,97,73,92]},
+  {state:'New Jersey',   lta:7.82, volTrend:4,totalLeads:358, totalActivated:28, marLeads:70, marLTA:1.43, marActivated:1, quad:'fix',  volData:[59,62,91,76,70]},
+  {state:'Georgia',      lta:7.16, volTrend:5,totalLeads:363, totalActivated:26, marLeads:80, marLTA:5.00, marActivated:4, quad:'fix',  volData:[51,62,85,85,80]},
+  {state:'Massachusetts',lta:10.98,volTrend:4,totalLeads:246, totalActivated:27, marLeads:56, marLTA:8.93, marActivated:5, quad:'scale',volData:[33,42,65,50,56]},
+  {state:'Pennsylvania', lta:5.61, volTrend:3,totalLeads:303, totalActivated:17, marLeads:70, marLTA:1.43, marActivated:1, quad:'fix',  volData:[65,33,69,66,70]},
+  {state:'North Carolina',lta:8.29,volTrend:5,totalLeads:217, totalActivated:18, marLeads:49, marLTA:4.08, marActivated:2, quad:'fix',  volData:[33,29,56,50,49]},
+  {state:'Virginia',     lta:6.52, volTrend:4,totalLeads:230, totalActivated:15, marLeads:54, marLTA:0,    marActivated:0, quad:'fix',  volData:[31,42,55,48,54]},
+  {state:'Michigan',     lta:6.82, volTrend:4,totalLeads:220, totalActivated:15, marLeads:51, marLTA:1.96, marActivated:1, quad:'fix',  volData:[30,27,62,50,51]},
+  {state:'Arizona',      lta:7.41, volTrend:4,totalLeads:216, totalActivated:16, marLeads:43, marLTA:0,    marActivated:0, quad:'fix',  volData:[33,42,50,48,43]},
+  {state:'Ohio',         lta:6.00, volTrend:5,totalLeads:200, totalActivated:12, marLeads:54, marLTA:1.85, marActivated:1, quad:'fix',  volData:[32,27,50,37,54]},
+  {state:'Washington',   lta:10.37,volTrend:3,totalLeads:164, totalActivated:17, marLeads:39, marLTA:10.26,marActivated:4, quad:'scale',volData:[24,23,39,39,39]},
+  {state:'Maryland',     lta:8.95, volTrend:3,totalLeads:190, totalActivated:17, marLeads:36, marLTA:8.33, marActivated:3, quad:'scale',volData:[29,23,49,53,36]},
+  {state:'Tennessee',    lta:8.50, volTrend:5,totalLeads:153, totalActivated:13, marLeads:40, marLTA:7.50, marActivated:3, quad:'fix',  volData:[17,22,36,38,40]},
+  {state:'Nevada',       lta:9.45, volTrend:4,totalLeads:127, totalActivated:12, marLeads:27, marLTA:7.41, marActivated:2, quad:'fix',  volData:[19,17,29,35,27]},
+  {state:'Colorado',     lta:5.93, volTrend:4,totalLeads:135, totalActivated:8,  marLeads:31, marLTA:9.68, marActivated:3, quad:'fix',  volData:[21,30,29,24,31]},
+  {state:'Utah',         lta:12.32,volTrend:4,totalLeads:138, totalActivated:17, marLeads:32, marLTA:3.13, marActivated:1, quad:'scale',volData:[16,29,34,27,32]},
+  {state:'Indiana',      lta:6.47, volTrend:3,totalLeads:139, totalActivated:9,  marLeads:29, marLTA:3.45, marActivated:1, quad:'fix',  volData:[21,19,35,35,29]},
+  {state:'Oklahoma',     lta:12.50,volTrend:4,totalLeads:72,  totalActivated:9,  marLeads:22, marLTA:9.09, marActivated:2, quad:'scale',volData:[7,10,21,12,22]},
+  {state:'Wisconsin',    lta:11.76,volTrend:3,totalLeads:102, totalActivated:12, marLeads:22, marLTA:9.09, marActivated:2, quad:'scale',volData:[18,20,26,16,22]},
+  {state:'Connecticut',  lta:8.70, volTrend:4,totalLeads:92,  totalActivated:8,  marLeads:30, marLTA:10.00,marActivated:3, quad:'fix',  volData:[20,13,16,13,30]},
+  {state:'Missouri',     lta:12.64,volTrend:2,totalLeads:87,  totalActivated:11, marLeads:14, marLTA:0,    marActivated:0, quad:'nurture',volData:[19,16,16,22,14]},
+  {state:'Minnesota',    lta:13.04,volTrend:3,totalLeads:69,  totalActivated:9,  marLeads:12, marLTA:8.33, marActivated:1, quad:'nurture',volData:[10,9,20,18,12]},
+  {state:'Kansas',       lta:13.64,volTrend:3,totalLeads:44,  totalActivated:6,  marLeads:12, marLTA:8.33, marActivated:1, quad:'nurture',volData:[8,7,11,6,12]},
+  {state:'Idaho',        lta:15.69,volTrend:2,totalLeads:51,  totalActivated:8,  marLeads:4,  marLTA:0,    marActivated:0, quad:'nurture',volData:[9,12,17,9,4]},
+  {state:'Maine',        lta:27.27,volTrend:1,totalLeads:11,  totalActivated:3,  marLeads:3,  marLTA:0,    marActivated:0, quad:'nurture',volData:[1,1,4,2,3]},
+  {state:'Louisiana',    lta:3.13, volTrend:3,totalLeads:96,  totalActivated:3,  marLeads:23, marLTA:0,    marActivated:0, quad:'pause', volData:[12,12,34,15,23]},
+  {state:'Delaware',     lta:3.85, volTrend:2,totalLeads:26,  totalActivated:1,  marLeads:4,  marLTA:0,    marActivated:0, quad:'pause', volData:[10,3,7,2,4]},
+  {state:'Iowa',         lta:3.03, volTrend:1,totalLeads:33,  totalActivated:1,  marLeads:10, marLTA:0,    marActivated:0, quad:'pause', volData:[5,6,7,5,10]},
+  {state:'Montana',      lta:0,    volTrend:1,totalLeads:11,  totalActivated:0,  marLeads:2,  marLTA:0,    marActivated:0, quad:'pause', volData:[2,3,3,1,2]},
+  {state:'Alaska',       lta:0,    volTrend:1,totalLeads:5,   totalActivated:0,  marLeads:0,  marLTA:0,    marActivated:0, quad:'pause', volData:[1,1,2,1,0]},
+];
+const ORGANIC_LTA={'Alabama':[5.00,5.56,0,8.00,13.33],'Alaska':[0,0,0,0,0],'Arizona':[6.06,9.52,14.00,6.25,0],'Arkansas':[0,12.50,15.38,0,5.26],'California':[13.10,10.24,10.60,7.84,4.53],'Colorado':[4.76,6.67,3.45,4.17,9.68],'Connecticut':[15.00,7.69,6.25,0,10.00],'Delaware':[0,0,14.29,0,0],'District of Columbia':[14.29,11.11,0,0,0],'Florida':[7.92,16.94,12.59,8.66,7.43],'Georgia':[0,9.68,8.24,10.59,5.00],'Hawaii':[0,16.67,0,0,0],'Idaho':[11.11,25.00,11.76,22.22,0],'Illinois':[9.62,22.00,7.22,10.96,8.70],'Indiana':[0,10.53,5.71,11.43,3.45],'Iowa':[0,16.67,0,0,0],'Kansas':[12.50,42.86,0,16.67,8.33],'Kentucky':[12.50,6.25,7.69,8.00,0],'Louisiana':[8.33,0,2.94,6.67,0],'Maine':[0,0,75.00,0,0],'Maryland':[24.14,8.70,6.12,3.77,8.33],'Massachusetts':[15.15,14.29,6.15,14.00,8.93],'Michigan':[20.00,11.11,3.23,6.00,1.96],'Minnesota':[20.00,33.33,5.00,11.11,8.33],'Mississippi':[0,9.09,17.65,0,13.33],'Missouri':[5.26,25.00,18.75,13.64,0],'Montana':[0,0,0,0,0],'Nebraska':[0,0,0,0,0],'Nevada':[0,17.65,20.69,2.86,7.41],'New Hampshire':[0,0,33.33,20.00,0],'New Jersey':[8.47,9.68,9.89,9.21,1.43],'New Mexico':[0,20.00,0,0,0],'New York':[9.68,2.86,8.09,11.43,6.53],'North Carolina':[6.06,3.45,8.93,16.00,4.08],'North Dakota':[0,0,0,0,0],'Ohio':[12.50,3.70,10.00,2.70,1.85],'Oklahoma':[14.29,30.00,4.76,16.67,9.09],'Oregon':[14.29,20.00,5.26,10.00,0],'Pennsylvania':[12.31,0,5.80,6.06,1.43],'Rhode Island':[0,25.00,0,14.29,0],'South Carolina':[9.09,8.00,5.88,3.70,4.00],'South Dakota':[0,0,0,0,0],'Tennessee':[5.88,13.64,8.33,7.89,7.50],'Texas':[9.93,8.28,5.22,8.99,4.55],'Utah':[6.25,20.69,5.88,25.93,3.13],'Vermont':[50,0,50,0,0],'Virginia':[6.45,16.67,5.45,6.25,0],'Washington':[16.67,13.04,10.26,5.13,10.26],'West Virginia':[0,0,33.33,0,0],'Wisconsin':[5.56,25.00,15.38,0,9.09],'Wyoming':[0,0,0,0,0]};
+
+/* ═══════════════════ CHANNEL CONFIG ═══════════════════ */
+const CH={
+  paid:{acc:'#2ecc8a',accDim:'rgba(46,204,138,0.15)',accBorder:'rgba(46,204,138,0.25)',label:'Google Ads',logoMark:'Google Ads',sbChannel:'Google Ads · Paid',badgeText:'Google Ads active · Meta attribution paused',pageTitle:'Performance Marketing Dashboard',pageSub:'Signup → paying subscriber · Google Ads spend efficiency by state',states:PAID_STATES,ltaByMonth:PAID_LTA,mapMax:70,colorRamp:['#1e2a22','#14452f','#0d6640','#0a8a54','#1D9E75','#2ecc8a','#5ddba3','#8de8be'],matrixYMax:80,matrixThreshold:15,matrixYLabel:'Grand total LTA% (signup → paying subscriber)',
+    kpis:[{label:'Total signups',val:'5,179',sub:'Nov 2025–Apr 2026',accent:true},{label:'Est. subscribers',val:'~177',sub:'Based on LTA% rates'},{label:'Mar Google spend',val:'$76.4k',sub:'Across all states'},{label:'Avg Mar CPS',val:'~$1,132',sub:'Converting states only'},{label:'Wasted spend',val:'~$7.6k',sub:'Zero Mar LTA% states',color:'var(--red)'}],
+    banner:{bg:'var(--red-dim)',border:'rgba(240,82,82,0.2)',iconBg:'rgba(240,82,82,0.2)',titleColor:'var(--red)',statColor:'var(--red)',title:'Immediate action — zero-return states + declining LTA%',sub:'Connecticut, Missouri, Alabama, Kentucky, Oregon, Mississippi have zero subscribers YTD. National LTA% dropped to 4.56% in March — still below the 5% target. April is partial (271 leads, 0.37% LTA).',stat:'$7,604',statLabel:'wasted · Mar',icon:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f05252" stroke-width="1.5"><path d="M8 2L14 13H2L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.5" fill="#f05252"/></svg>'},
+    sizeOpts:[{v:'spend',l:'Mar Google spend'},{v:'signups',l:'Total signups'},{v:'subs',l:'Total subscribers'}],
+    getSize:(d,m)=>m==='spend'?d.gSpend:m==='signups'?d.signups:d.subs||1,
+    tooltipExtra:(d)=>{const cs=d.cps?'$'+Math.round(d.cps).toLocaleString():(d.lta===0?'n/a':'—');return`<div class="tt-row"><span class="tt-key">Mar spend</span><span class="tt-val">$${d.gSpend.toLocaleString()}</span></div><div class="tt-row"><span class="tt-key">Mar CPS</span><span class="tt-val">${cs}</span></div><div class="tt-row"><span class="tt-key">Subscribers</span><span class="tt-val">${d.subs}</span></div>`;},
+    tableHeaders:['State','Grand LTA%','Mar LTA%','Signups','Subscribers','Mar spend','Mar CPS','Trend','Signal'],
+    tableRow:(d,TL,TC,PC)=>{const cs=d.cps?'$'+Math.round(d.cps).toLocaleString():(d.lta===0?'∞':'—');const cc=!d.cps?(d.lta===0?'color:var(--red)':''):(d.cps<150?'color:var(--green)':d.cps>500?'color:var(--red)':'color:var(--amber)');return`<tr><td>${d.state}</td><td class="mono">${d.lta.toFixed(1)}%</td><td class="mono">${d.marLTA.toFixed(1)}%</td><td class="mono">${d.signups}</td><td class="mono">${d.subs}</td><td class="mono">$${d.gSpend.toLocaleString()}</td><td class="mono" style="${cc}">${cs}</td><td class="${TC[d.volTrend]}">${TL[d.volTrend]}</td><td><span class="pill ${PC[d.quad]}">${QL[d.quad]}</span></td></tr>`;},
+    tableSortOpts:[{k:'lta',l:'LTA%'},{k:'cps',l:'CPS'},{k:'spend',l:'Spend'},{k:'subs',l:'Subscribers'}],
+    tableSort:(arr,k)=>{if(k==='lta')return arr.sort((a,b)=>b.lta-a.lta);if(k==='cps'){return arr.sort((a,b)=>{if(!a.cps&&!b.cps)return 0;if(!a.cps)return 1;if(!b.cps)return-1;return a.cps-b.cps;});}if(k==='spend')return arr.sort((a,b)=>b.gSpend-a.gSpend);if(k==='subs')return arr.sort((a,b)=>b.subs-a.subs);return arr;},
+    volTotals:[453,495,1494,1282,1184,271],ltaTrend:[5.08,6.26,1.81,3.28,4.56,0.37],ltaTrendColor:'#2ecc8a',
+    topVolStates:[{l:'CA',d:[78,63,139,114,135,31],c:'#2ecc8a'},{l:'FL',d:[50,52,140,104,133,36],c:'#4da6ff'},{l:'TX',d:[44,57,129,102,126,38],c:'#f0a442'},{l:'NY',d:[26,39,120,106,103,21],c:'#f05252'},{l:'NJ',d:[19,23,90,62,45,6],c:'#a78bfa'},{l:'PA',d:[28,18,85,67,36,7],c:'#5dcaa5'},{l:'GA',d:[19,18,37,41,45,10],c:'#fbbf24'}],
+    gemTitle:'High LTA% states — volume trajectory',
+    gemStates:[{l:'Iowa (12.5%)',d:[2,2,2,5,3,2],c:'#f0a442',dash:[4,4]},{l:'Wisconsin (9.5%)',d:[5,7,8,10,12,0],c:'#2ecc8a'},{l:'Maryland (8.4%)',d:[10,16,20,19,18,0],c:'#4da6ff'},{l:'Nevada (7.1%)',d:[2,11,6,9,13,1],c:'#a78bfa'},{l:'Utah (6.7%)',d:[9,2,9,11,10,4],c:'#f05252'}],
+    quadActions:{scale:'Increase Google budget — strong subscriber conversion with growing or stable volume.',fix:'Volume growing but LTA% low — audit landing page, keyword quality, and audience match.',nurture:'High LTA% but low volume — test budget increases and broader match types.',pause:'Zero paying subscribers — pause spend immediately and investigate lead quality.'}
+  },
+  organic:{acc:'#4da6ff',accDim:'rgba(77,166,255,0.15)',accBorder:'rgba(77,166,255,0.25)',label:'Organic',logoMark:'Organic',sbChannel:'Organic · All sources',badgeText:'Organic channel · No ad spend',pageTitle:'Organic Performance Dashboard',pageSub:'Lead → activated subscriber · organic channel · Nov 2025–Mar 2026',states:ORGANIC_STATES,ltaByMonth:ORGANIC_LTA,mapMax:25,colorRamp:['#0d1a26','#0d3352','#0d4f80','#1a6aaa','#2e8fd4','#4da6ff','#80c4ff','#b3dcff'],matrixYMax:32,matrixThreshold:10,matrixYLabel:'Grand total organic LTA% (lead → activated)',
+    kpis:[{label:'Total organic leads',val:'9,714',sub:'Nov 2025–Mar 2026',accent:true},{label:'Total activated',val:'802',sub:'Paying subscribers'},{label:'Overall LTA%',val:'8.25%',sub:'vs 6.75% paid',color:'var(--acc)'},{label:'Mar LTA%',val:'5.06%',sub:'Declining — watch closely'},{label:'Organic vs paid',val:'+22%',sub:'Better LTA% than paid',color:'var(--green)'}],
+    banner:{bg:'rgba(77,166,255,0.1)',border:'rgba(77,166,255,0.2)',iconBg:'rgba(77,166,255,0.2)',titleColor:'var(--acc)',statColor:'var(--acc)',title:'Organic converts 22% better than paid — but March LTA% is declining',sub:'Organic LTA% 8.25% vs paid 6.75%. March organic LTA% has dropped to 5.06% — lowest month on record.',stat:'802',statLabel:'activated',icon:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4da6ff" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.5" fill="#4da6ff"/></svg>'},
+    sizeOpts:[{v:'leads',l:'Total leads'},{v:'activated',l:'Total activated'},{v:'marLeads',l:'March leads'}],
+    getSize:(d,m)=>m==='leads'?d.totalLeads:m==='activated'?d.totalActivated||1:d.marLeads||1,
+    tooltipExtra:(d)=>`<div class="tt-row"><span class="tt-key">Total leads</span><span class="tt-val">${d.totalLeads.toLocaleString()}</span></div><div class="tt-row"><span class="tt-key">Activated</span><span class="tt-val">${d.totalActivated}</span></div>`,
+    tableHeaders:['State','Grand LTA%','Mar LTA%','Total leads','Activated','Mar leads','Mar activated','Trend','Signal'],
+    tableRow:(d,TL,TC,PC)=>{const lc=d.lta>=12?'color:var(--green)':d.lta>=8?'color:var(--acc)':d.lta>0?'color:var(--amber)':'color:var(--red)';return`<tr><td>${d.state}</td><td class="mono" style="${lc}">${d.lta.toFixed(1)}%</td><td class="mono">${d.marLTA.toFixed(1)}%</td><td class="mono">${d.totalLeads.toLocaleString()}</td><td class="mono">${d.totalActivated}</td><td class="mono">${d.marLeads}</td><td class="mono">${d.marActivated}</td><td class="${TC[d.volTrend]}">${TL[d.volTrend]}</td><td><span class="pill ${PC[d.quad]}">${QL[d.quad]}</span></td></tr>`;},
+    tableSortOpts:[{k:'lta',l:'LTA%'},{k:'leads',l:'Leads'},{k:'activated',l:'Activated'},{k:'marLTA',l:'Mar LTA%'}],
+    tableSort:(arr,k)=>{if(k==='lta')return arr.sort((a,b)=>b.lta-a.lta);if(k==='leads')return arr.sort((a,b)=>b.totalLeads-a.totalLeads);if(k==='activated')return arr.sort((a,b)=>b.totalActivated-a.totalActivated);if(k==='marLTA')return arr.sort((a,b)=>b.marLTA-a.marLTA);return arr;},
+    volTotals:[1524,1593,2324,2098,2175],ltaTrend:[9.25,11.30,8.43,8.34,5.06],ltaTrendColor:'#4da6ff',
+    topVolStates:[{l:'FL',d:[202,242,294,277,296],c:'#2ecc8a'},{l:'CA',d:[168,205,283,268,265],c:'#4da6ff'},{l:'TX',d:[151,145,230,189,176],c:'#f0a442'},{l:'NY',d:[155,140,173,175,199],c:'#f05252'},{l:'IL',d:[52,50,97,73,92],c:'#a78bfa'},{l:'GA',d:[51,62,85,85,80],c:'#5dcaa5'},{l:'NC',d:[33,29,56,50,49],c:'#fbbf24'}],
+    gemTitle:'High LTA% organic states — volume trajectory',
+    gemStates:[{l:'Maine (27%)',d:[1,1,4,2,3],c:'#2ecc8a',dash:[4,4]},{l:'Kansas (14%)',d:[8,7,11,6,12],c:'#4da6ff'},{l:'Missouri (13%)',d:[19,16,16,22,14],c:'#f0a442'},{l:'Minnesota (13%)',d:[10,9,20,18,12],c:'#a78bfa'},{l:'Oklahoma (13%)',d:[7,10,21,12,22],c:'#5dcaa5'}],
+    quadActions:{scale:'Strong activation rate + growing volume — increase content and SEO investment.',fix:'Volume growing but LTA% lagging — review onboarding funnel and organic lead source quality.',nurture:'High LTA% but low organic volume — expand content strategy and organic reach.',pause:'Low activation and low volume — deprioritise; investigate organic lead source quality.'}
+  }
+};
+
+const MONTHS=['Nov 2025','Dec 2025','Jan 2026','Feb 2026','Mar 2026','Apr 2026'];
+const MONTH_SHORT=['Nov','Dec','Jan','Feb','Mar','Apr'];
+const QL={scale:'Scale now',fix:'Fix funnel',nurture:'Nurture',pause:'Pause / cut'};
+const TL={1:'Flat/tiny',2:'Declining',3:'Stable',4:'Growing',5:'Strong growth'};
+const TC={1:'trend-flat',2:'trend-down',3:'trend-flat',4:'trend-up',5:'trend-up'};
+const PC={scale:'pill-green',fix:'pill-blue',nurture:'pill-amber',pause:'pill-red'};
+const LTA_TARGET=5.0;
+
+let currentChannel='paid',currentQuad='all',currentTab='matrix';
+let currentMonthIdx=5,mapReady=false,mapSvgSel=null,playInterval=null;
+let matrixChart=null,volDone={paid:false,organic:false};
+let currentSortKey='lta',bmSortKey='lta',bmOverrides={},bmChartInst=null;
+const chartReg={};
+let campData=[];
+let campDataDated=[];
+let cachedUSTopology=null;
+let isMapReady=false,isMapSvgSel=null,isMapPlayInterval=null,isMapDateIdx=0;
+
+function cfg(){return CH[currentChannel];}
+
+/* ─── CHANNEL SWITCH ─── */
+function switchChannel(ch){
+  if(ch===currentChannel)return;
+  currentChannel=ch;
+  const c=cfg();
+  const r=document.documentElement.style;
+  r.setProperty('--acc',c.acc);r.setProperty('--acc-dim',c.accDim);r.setProperty('--acc-border',c.accBorder);
+  document.getElementById('ch-paid').classList.toggle('active',ch==='paid');
+  document.getElementById('ch-organic').classList.toggle('active',ch==='organic');
+  document.getElementById('logo-mark').textContent=c.logoMark;
+  document.getElementById('sb-channel').textContent=c.sbChannel;
+  document.getElementById('page-title').textContent=c.pageTitle;
+  document.getElementById('page-sub').textContent=c.pageSub;
+  document.getElementById('ch-badge-text').textContent=c.badgeText;
+  document.getElementById('gemTitle').textContent=c.gemTitle;
+  renderKPIs();renderBanner();renderSizeOpts();
+  currentQuad='all';
+  ['all','scale','fix','nurture','pause'].forEach(id=>document.getElementById('nav-'+id).classList.remove('active'));
+  document.getElementById('nav-all').classList.add('active');
+  rebuildMatrix();renderQuadCards('all');renderTable();
+  buildMapLegend();document.getElementById('legendMax').textContent=(c.mapMax+'%+ LTA');
+  if(currentTab==='map'){updateMapKpis(currentMonthIdx);if(mapReady&&mapSvgSel)updateMapColors();}
+  destroyVolCharts();if(currentTab==='volume')initVolumeCharts();
+  if(currentTab==='budget'){bmOverrides={};runBudgetModel();}
+}
+
+function renderKPIs(){document.getElementById('kpiStrip').innerHTML=cfg().kpis.map((k,i)=>`<div class="kpi${i===0?' kpi-accent':''}"><div class="kpi-label">${k.label}</div><div class="kpi-val" style="${k.color?'color:'+k.color:''}">${k.val}</div><div class="kpi-sub">${k.sub}</div></div>`).join('');}
+function renderBanner(){const b=cfg().banner;document.getElementById('mainBanner').style.cssText=`background:${b.bg};border:1px solid ${b.border};border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:14px;margin-bottom:18px;`;document.getElementById('mainBanner').innerHTML=`<div class="banner-icon" style="background:${b.iconBg}">${b.icon}</div><div style="flex:1"><div class="banner-title" style="color:${b.titleColor}">${b.title}</div><div class="banner-sub">${b.sub}</div></div><div style="text-align:right;flex-shrink:0"><div class="banner-stat" style="color:${b.statColor}">${b.stat}</div><div style="font-size:11px;color:var(--text3)">${b.statLabel}</div></div>`;}
+function renderSizeOpts(){const sel=document.getElementById('sizeMode');sel.innerHTML=cfg().sizeOpts.map(o=>`<option value="${o.v}">${o.l}</option>`).join('');}
+
+/* ─── MATRIX ─── */
+function buildMatrixData(quadFilter){
+  const c=cfg(),sizeMode=document.getElementById('sizeMode').value;
+  const filtered=quadFilter==='all'?c.states:c.states.filter(s=>s.quad===quadFilter);
+  const maxSize=Math.max(...filtered.map(d=>c.getSize(d,sizeMode)));
+  const qColors={scale:'#2ecc8a',fix:c.acc,nurture:'#f0a442',pause:'#f05252'};
+  return{datasets:[{data:filtered.map(d=>({x:d.volTrend,y:d.lta,r:Math.max(5,Math.sqrt(c.getSize(d,sizeMode)/maxSize)*30),_d:d})),backgroundColor:filtered.map(d=>qColors[d.quad]+'55'),borderColor:filtered.map(d=>qColors[d.quad]+'cc'),borderWidth:1.5}]};
+}
+function rebuildMatrix(){
+  const c=cfg();if(matrixChart){matrixChart.destroy();matrixChart=null;}
+  const ctx=document.getElementById('matrixChart');
+  matrixChart=new Chart(ctx,{type:'bubble',data:buildMatrixData('all'),options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:32,right:24,bottom:8,left:8}},plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{min:0,max:6,title:{display:true,text:'Volume trend (1=flat → 5=strong growth)',color:'#555c67',font:{size:11}},ticks:{color:'#555c67',callback:v=>(['','Flat','Declining','Stable','Growing','Strong',''][v]||''),font:{size:11}},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.07)'}},y:{min:-2,max:c.matrixYMax,title:{display:true,text:c.matrixYLabel,color:'#555c67',font:{size:11}},ticks:{color:'#555c67',callback:v=>v+'%',font:{size:11}},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.07)'}}},onHover(evt,elements){ctx.style.cursor=elements.length?'pointer':'default';const tt=document.getElementById('tooltip');if(!elements.length){tt.classList.remove('show');return;}const d=elements[0].element.$context.raw._d;tt.innerHTML=`<div class="tt-state">${d.state}</div><div class="tt-row"><span class="tt-key">Grand LTA%</span><span class="tt-val">${d.lta.toFixed(1)}%</span></div><div class="tt-row"><span class="tt-key">Mar LTA%</span><span class="tt-val">${d.marLTA.toFixed(1)}%</span></div>${cfg().tooltipExtra(d)}<div class="tt-action">${cfg().quadActions[d.quad]}</div>`;const par=ctx.parentElement.getBoundingClientRect();let l=evt.native.clientX-par.left+14,t=evt.native.clientY-par.top-50;if(l+220>par.width)l-=240;if(t<0)t=10;tt.style.left=l+'px';tt.style.top=t+'px';tt.classList.add('show');}},plugins:[{id:'ql',afterDraw(chart){const{ctx:cv,chartArea:{left,right,top,bottom},scales}=chart;const mx=scales.x.getPixelForValue(3),my=scales.y.getPixelForValue(cfg().matrixThreshold);cv.save();cv.setLineDash([3,5]);cv.strokeStyle='rgba(255,255,255,0.1)';cv.lineWidth=1;cv.beginPath();cv.moveTo(mx,top);cv.lineTo(mx,bottom);cv.stroke();cv.beginPath();cv.moveTo(left,my);cv.lineTo(right,my);cv.stroke();cv.setLineDash([]);cv.font='500 11px DM Mono,monospace';cv.fillStyle='#2ecc8a';cv.fillText('Scale now',mx+10,top+18);cv.fillStyle='#f0a442';cv.fillText('Nurture',left+10,top+18);cv.fillStyle=cfg().acc;cv.fillText('Fix funnel',mx+10,bottom-10);cv.fillStyle='#f05252';cv.fillText('Pause / cut',left+10,bottom-10);cv.restore();}}]});
+}
+function updateMatrixChart(){if(!matrixChart)return;matrixChart.data=buildMatrixData(currentQuad);matrixChart.update();}
+function filterQuad(q){currentQuad=q;updateMatrixChart();['all','scale','fix','nurture','pause'].forEach(id=>document.getElementById('nav-'+id).classList.remove('active'));document.getElementById('nav-'+q).classList.add('active');renderQuadCards(q);}
+function renderQuadCards(filter){
+  const c=cfg(),quads=filter==='all'?['scale','fix','nurture','pause']:[filter];
+  const qColors={scale:'#2ecc8a',fix:c.acc,nurture:'#f0a442',pause:'#f05252'};
+  document.getElementById('quadCards').innerHTML=quads.map(q=>{const sts=c.states.filter(s=>s.quad===q).sort((a,b)=>b.lta-a.lta);return`<div class="quad-card"><div class="qc-header"><div class="qc-dot" style="background:${qColors[q]}"></div><div class="qc-title" style="color:${qColors[q]}">${QL[q]}</div><div class="qc-count">${sts.length} states</div></div><div style="font-size:11px;color:var(--text3);margin-bottom:10px;">${c.quadActions[q]}</div><div>${sts.map(s=>`<span class="state-pill"><span>${s.state}</span><span class="sp-lta">${s.lta.toFixed(1)}%</span></span>`).join('')}</div></div>`;}).join('');
+}
+
+/* ─── TABLE ─── */
+function renderTable(){
+  const c=cfg();
+  document.getElementById('tableCtrls').innerHTML=c.tableSortOpts.map((o,i)=>`<button class="ctrl-btn${i===0?' active':''}" onclick="sortTable('${o.k}',event)">Sort: ${o.l}</button>`).join('');
+  document.getElementById('tableHead').innerHTML=c.tableHeaders.map(h=>`<th>${h}</th>`).join('');
+  document.getElementById('tableBody').innerHTML=c.tableSort([...c.states],currentSortKey).map(d=>c.tableRow(d,TL,TC,PC)).join('');
+}
+function sortTable(k,e){currentSortKey=k;document.querySelectorAll('#tab-table .ctrl-btn').forEach(b=>b.classList.remove('active'));if(e&&e.target)e.target.classList.add('active');renderTable();}
+
+/* ─── MAP ─── */
+function ltaToColor(val){if(!val||val<=0)return'#1a1e25';const t=Math.min(val/cfg().mapMax,1);return d3.interpolateRgbBasis(cfg().colorRamp)(t*0.85+0.1);}
+function buildMapLegend(){
+  const el=document.getElementById('legendScale');el.innerHTML='';
+  for(let i=0;i<=14;i++){const div=document.createElement('div');div.className='map-legend-swatch';div.style.background=d3.interpolateRgbBasis(cfg().colorRamp)(i/14*0.85+0.1);el.appendChild(div);}
+  const te=document.getElementById('sliderTicks');te.innerHTML='';
+  MONTH_SHORT.forEach((m,i)=>{const t=document.createElement('span');t.className='slider-tick'+(i===currentMonthIdx?' active':'');t.textContent=m;t.onclick=()=>{document.getElementById('monthSlider').value=i;onSliderChange(i);};te.appendChild(t);});
+}
+function updateMapKpis(idx){
+  const lta=cfg().ltaByMonth,active=Object.entries(lta).filter(([,a])=>a[idx]>0&&a[idx]<90);
+  const avg=active.length?(active.reduce((s,[,a])=>s+a[idx],0)/active.length):0;
+  const top=[...active].sort((a,b)=>b[1][idx]-a[1][idx])[0];
+  document.getElementById('mapKpis').innerHTML=`<div class="map-kpi"><div class="mk-label">Viewing</div><div class="mk-val" style="color:var(--acc)">${MONTHS[idx]}</div></div><div class="map-kpi"><div class="mk-label">States converting</div><div class="mk-val">${active.length}</div></div><div class="map-kpi"><div class="mk-label">Avg LTA% (active)</div><div class="mk-val">${avg.toFixed(1)}%</div></div><div class="map-kpi"><div class="mk-label">Top state</div><div class="mk-val" style="font-size:12px">${top?top[0]+' — '+top[1][idx].toFixed(1)+'%':'—'}</div></div>`;
+}
+function updateMapColors(){const lta=cfg().ltaByMonth;mapSvgSel.selectAll('.state-path').transition().duration(450).ease(d3.easeQuadInOut).attr('fill',function(){return ltaToColor((lta[this.getAttribute('data-name')]||[])[currentMonthIdx]||0);});}
+function initMap(){
+  buildMapLegend();if(mapReady){updateMapKpis(currentMonthIdx);updateMapColors();return;}
+  const container=document.getElementById('map-svg-container');
+  container.innerHTML='<div style="text-align:center;padding:80px 0;color:var(--text3);font-size:13px;">Loading US map data...</div>';
+
+  const buildLTAMap=us=>{
+    cachedUSTopology=us;
+    const features=topojson.feature(us,us.objects.states);container.innerHTML='';
+    mapSvgSel=d3.select(container).append('svg').attr('viewBox','0 0 900 560').attr('preserveAspectRatio','xMidYMid meet').style('width','100%');
+    const proj=d3.geoAlbersUsa().scale(1100).translate([450,280]),pathGen=d3.geoPath(proj),tt=document.getElementById('mapTooltip');
+    mapSvgSel.selectAll('path').data(features.features).join('path').attr('class','state-path').attr('d',pathGen).attr('stroke','#0d0f12').attr('stroke-width',0.6).attr('data-name',d=>d.properties.name)
+      .on('mousemove',function(event,d){
+        const name=d.properties.name,lta=(cfg().ltaByMonth[name]||[])[currentMonthIdx]||0,sd=cfg().states.find(s=>s.state===name);
+        const qColors={scale:'#2ecc8a',fix:cfg().acc,nurture:'#f0a442',pause:'#f05252'};
+        const extra=sd&&currentChannel==='paid'?`<div class="tt-row"><span class="tt-key">Mar spend</span><span class="tt-val">$${sd.gSpend.toLocaleString()}</span></div>`:sd&&currentChannel==='organic'?`<div class="tt-row"><span class="tt-key">Activated</span><span class="tt-val">${sd.totalActivated}</span></div>`:'';
+        const qStr=sd?`<div class="tt-row"><span class="tt-key">Signal</span><span class="tt-val" style="color:${qColors[sd.quad]}">${QL[sd.quad]}</span></div>`:'';
+        tt.innerHTML=`<div class="tt-state">${name}</div><div class="tt-row"><span class="tt-key">${MONTHS[currentMonthIdx]} LTA%</span><span class="tt-val" style="color:${lta>0?cfg().acc:'#555c67'}">${lta.toFixed(1)}%</span></div>${extra}${qStr}`;
+        tt.style.left=(event.clientX+16)+'px';tt.style.top=Math.max(10,event.clientY-50)+'px';tt.classList.add('show');
+      }).on('mouseleave',()=>tt.classList.remove('show'));
+    mapReady=true;updateMapKpis(currentMonthIdx);updateMapColors();
+  };
+
+  if(cachedUSTopology){buildLTAMap(cachedUSTopology);return;}
+  d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(buildLTAMap)
+    .catch(()=>{container.innerHTML='<div style="text-align:center;padding:80px 0;color:var(--red);font-size:13px;">Could not load map. Check internet connection.</div>';});
+}
+function updateMap(idx){currentMonthIdx=+idx;document.getElementById('sliderMonthLabel').textContent=MONTHS[idx];document.getElementById('monthSlider').value=idx;document.querySelectorAll('.slider-tick').forEach((t,i)=>t.classList.toggle('active',i===idx));updateMapKpis(idx);if(mapReady&&mapSvgSel)updateMapColors();}
+function onSliderChange(v){updateMap(+v);}
+function togglePlay(){const btn=document.getElementById('playBtn');if(playInterval){clearInterval(playInterval);playInterval=null;btn.innerHTML='&#9654; Play timeline';return;}btn.innerHTML='&#9646;&#9646; Pause';let idx=currentMonthIdx;playInterval=setInterval(()=>{idx=(idx+1)%6;updateMap(idx);if(idx===5){clearInterval(playInterval);playInterval=null;btn.innerHTML='&#9654; Play timeline';}},1200);}
+
+/* ─── VOLUME ─── */
+function destroyVolCharts(){['totalVolChart','ltaTrendChart','topVolChart','gemVolChart'].forEach(id=>{if(chartReg[id]){chartReg[id].destroy();delete chartReg[id];}const c=document.getElementById(id);if(c){const p=c.parentElement;p.innerHTML='';const nc=document.createElement('canvas');nc.id=id;p.appendChild(nc);}});document.getElementById('volLegend').innerHTML='';document.getElementById('gemLegend').innerHTML='';}
+function initVolumeCharts(){
+  const c=cfg(),mo=['Nov','Dec','Jan','Feb','Mar'],gc='rgba(255,255,255,0.05)',tc='#555c67',acc=c.acc;
+  chartReg['totalVolChart']=new Chart(document.getElementById('totalVolChart'),{type:'bar',data:{labels:mo,datasets:[{data:c.volTotals,backgroundColor:[acc+'33',acc+'33',acc,acc+'88','#2ecc8a'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc},grid:{color:gc},border:{color:'transparent'}},y:{ticks:{color:tc,callback:v=>v.toLocaleString()},grid:{color:gc},border:{color:'transparent'}}}}});
+  chartReg['ltaTrendChart']=new Chart(document.getElementById('ltaTrendChart'),{type:'line',data:{labels:mo,datasets:[{data:c.ltaTrend,borderColor:c.ltaTrendColor,backgroundColor:c.ltaTrendColor+'18',tension:0.3,fill:true,pointRadius:5,pointBackgroundColor:c.ltaTrendColor,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc},grid:{color:gc},border:{color:'transparent'}},y:{min:0,ticks:{color:tc,callback:v=>v+'%'},grid:{color:gc},border:{color:'transparent'}}}}});
+  const vl=document.getElementById('volLegend');c.topVolStates.forEach(s=>{const e=document.createElement('span');e.style.cssText='display:flex;align-items:center;gap:6px;';e.innerHTML=`<span style="width:10px;height:10px;border-radius:2px;background:${s.c};flex-shrink:0;"></span>${s.l}`;vl.appendChild(e);});
+  chartReg['topVolChart']=new Chart(document.getElementById('topVolChart'),{type:'line',data:{labels:mo,datasets:c.topVolStates.map(s=>({label:s.l,data:s.d,borderColor:s.c,backgroundColor:'transparent',tension:0.3,pointRadius:4,pointBackgroundColor:s.c,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc},grid:{color:gc},border:{color:'transparent'}},y:{ticks:{color:tc},grid:{color:gc},border:{color:'transparent'}}}}});
+  const gl=document.getElementById('gemLegend');c.gemStates.forEach(s=>{const e=document.createElement('span');e.style.cssText='display:flex;align-items:center;gap:6px;';e.innerHTML=`<span style="width:10px;height:10px;border-radius:2px;background:${s.c};flex-shrink:0;"></span>${s.l}`;gl.appendChild(e);});
+  chartReg['gemVolChart']=new Chart(document.getElementById('gemVolChart'),{type:'line',data:{labels:mo,datasets:c.gemStates.map(s=>({label:s.l,data:s.d,borderColor:s.c,backgroundColor:'transparent',tension:0.3,pointRadius:4,pointBackgroundColor:s.c,borderWidth:2,borderDash:s.dash||[]}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc},grid:{color:gc},border:{color:'transparent'}},y:{ticks:{color:tc},grid:{color:gc},border:{color:'transparent'}}}}});
+}
+
+/* ─── BUDGET MODELLER ─── */
+function runBudgetModel(){
+  const totalBudget=+document.getElementById('budgetSlider').value;
+  document.getElementById('budgetSliderVal').textContent='$'+totalBudget.toLocaleString();
+  const states=PAID_STATES;
+  const volMult={1:0.5,2:0.7,3:1.0,4:1.3,5:1.6};
+  // Separate qualifying (lta >= 5%) and paused (lta < 5%)
+  const qualifying=states.filter(s=>s.lta>=LTA_TARGET);
+  const belowTarget=states.filter(s=>s.lta<LTA_TARGET);
+  // Freed budget from paused states
+  const pausedSpend=belowTarget.reduce((sum,s)=>sum+s.gSpend,0);
+  // Efficiency score: lta * volTrend multiplier * leads-per-dollar proxy
+  qualifying.forEach(s=>{
+    const lpd=s.marLeads>0&&s.gSpend>0?s.marLeads/s.gSpend:0.01;
+    s._score=s.lta*volMult[s.volTrend]*Math.sqrt(lpd*1000);
+    s._override=bmOverrides[s.state]!==undefined?bmOverrides[s.state]:null;
+  });
+  // Apply overrides first, allocate remaining proportionally
+  const overriddenTotal=qualifying.filter(s=>s._override!==null).reduce((sum,s)=>sum+s._override,0);
+  const remaining=Math.max(0,totalBudget-overriddenTotal);
+  const freeStates=qualifying.filter(s=>s._override===null);
+  const totalScore=freeStates.reduce((sum,s)=>sum+s._score,0);
+  qualifying.forEach(s=>{
+    s._rec=s._override!==null?s._override:totalScore>0?Math.round((s._score/totalScore)*remaining):0;
+  });
+  // Compute projections
+  qualifying.forEach(s=>{
+    const lpd=s.marLeads>0&&s.gSpend>0?s.marLeads/s.gSpend:0.005;
+    s._projLeads=s._rec*lpd;
+    s._projSubs=s._projLeads*(s.lta/100);
+  });
+  belowTarget.forEach(s=>{s._rec=0;s._projLeads=0;s._projSubs=0;});
+  const allStates=[...qualifying,...belowTarget];
+  // National projected LTA%
+  const totalProjLeads=qualifying.reduce((sum,s)=>sum+s._projLeads,0);
+  const totalProjSubs=qualifying.reduce((sum,s)=>sum+s._projSubs,0);
+  const projLTA=totalProjLeads>0?(totalProjSubs/totalProjLeads)*100:0;
+  const totalRec=qualifying.reduce((sum,s)=>sum+s._rec,0);
+  const currentTotalSubs=states.reduce((sum,s)=>sum+s.subs,0);
+  const projTotalSubs=Math.round(totalProjSubs);
+  const targetMet=projLTA>=LTA_TARGET;
+  // KPIs
+  document.getElementById('bmKpis').innerHTML=`
+    <div class="bm-kpi${targetMet?' target-met':' target-miss'}">
+      <div class="bm-kpi-label">Projected national LTA%</div>
+      <div class="bm-kpi-val" style="color:${targetMet?'var(--green)':'var(--red)'}">${projLTA.toFixed(1)}%</div>
+      <div class="bm-kpi-sub">${targetMet?'✓ Target met (≥5%)':'✗ Below 5% target'}</div>
+    </div>
+    <div class="bm-kpi">
+      <div class="bm-kpi-label">Projected subscribers / mo</div>
+      <div class="bm-kpi-val">${projTotalSubs.toLocaleString()}</div>
+      <div class="bm-kpi-sub">vs ~${Math.round(currentTotalSubs/5)} current avg/mo</div>
+    </div>
+    <div class="bm-kpi">
+      <div class="bm-kpi-label">Budget allocated</div>
+      <div class="bm-kpi-val">$${totalRec.toLocaleString()}</div>
+      <div class="bm-kpi-sub">of $${totalBudget.toLocaleString()} total</div>
+    </div>
+    <div class="bm-kpi">
+      <div class="bm-kpi-label">Freed from zero-LTA states</div>
+      <div class="bm-kpi-val" style="color:var(--green)">$${Math.min(pausedSpend,totalBudget).toLocaleString()}</div>
+      <div class="bm-kpi-sub">${belowTarget.length} states paused / reduced</div>
+    </div>`;
+  // Sort table
+  let sorted=[...allStates];
+  if(bmSortKey==='lta')sorted.sort((a,b)=>b.lta-a.lta);
+  else if(bmSortKey==='spend')sorted.sort((a,b)=>b._rec-a._rec);
+  else if(bmSortKey==='subs')sorted.sort((a,b)=>b._projSubs-a._projSubs);
+  const maxRec=Math.max(...allStates.map(s=>s._rec),1);
+  const statusOf=(s)=>{
+    if(s.lta===0)return{label:'Pause',cls:'pill-red'};
+    if(s.lta<LTA_TARGET)return{label:'Below target',cls:'pill-amber'};
+    const ratio=s._rec/(s.gSpend||1);
+    if(ratio>1.3)return{label:'Scale up',cls:'pill-green'};
+    if(ratio<0.7)return{label:'Reduce',cls:'pill-amber'};
+    return{label:'Hold',cls:'pill-blue'};
+  };
+  document.getElementById('bmTableBody').innerHTML=sorted.map(s=>{
+    const st=statusOf(s);
+    const diff=s._rec-s.gSpend;
+    const diffStr=diff===0?'—':(diff>0?'+$'+Math.abs(diff).toLocaleString():'-$'+Math.abs(diff).toLocaleString());
+    const diffClass=diff>0?'change-pos':diff<0?'change-neg':'change-neu';
+    const barPct=Math.round((s._rec/maxRec)*100);
+    const barColor=s.lta>=LTA_TARGET?'var(--green)':'var(--red)';
+    const overrideVal=bmOverrides[s.state]!==undefined?bmOverrides[s.state]:'';
+    return`<tr>
+      <td>${s.state}</td>
+      <td class="mono" style="${s.lta>=LTA_TARGET?'color:var(--green)':'color:var(--red)'}">${s.lta.toFixed(1)}%</td>
+      <td class="mono">$${s.gSpend.toLocaleString()}</td>
+      <td class="mono">$${s._rec.toLocaleString()}</td>
+      <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${barPct}%;background:${barColor}"></div></div><span class="mono" style="font-size:10px;color:var(--text3);min-width:30px;">${barPct}%</span></div></td>
+      <td class="${diffClass}">${diffStr}</td>
+      <td class="mono">${s._projSubs>0?Math.round(s._projSubs).toLocaleString():'—'}</td>
+      <td><span class="pill ${st.cls}">${st.label}</span></td>
+      <td><input class="override-input" type="number" min="0" max="${totalBudget}" placeholder="Override" value="${overrideVal}" onchange="setOverride('${s.state}',this.value)"></td>
+    </tr>`;
+  }).join('');
+  // Comparison chart (top 15 by recommended)
+  const top15=allStates.filter(s=>s._rec>0||s.gSpend>0).sort((a,b)=>(b._rec+b.gSpend)-(a._rec+a.gSpend)).slice(0,15);
+  const gc='rgba(255,255,255,0.05)',tc='#555c67';
+  if(bmChartInst){bmChartInst.destroy();}
+  bmChartInst=new Chart(document.getElementById('bmCompareChart'),{type:'bar',data:{labels:top15.map(s=>s.state),datasets:[{label:'Current',data:top15.map(s=>s.gSpend),backgroundColor:'#55585f',borderRadius:2},{label:'Recommended',data:top15.map(s=>s._rec),backgroundColor:'#2ecc8a88',borderRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc,font:{size:10},maxRotation:40,autoSkip:false},grid:{color:gc},border:{color:'transparent'}},y:{ticks:{color:tc,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:gc},border:{color:'transparent'}}}}});
+}
+function setOverride(state,val){if(val==='')delete bmOverrides[state];else bmOverrides[state]=Math.max(0,+val);runBudgetModel();}
+function resetOverrides(){bmOverrides={};document.getElementById('budgetSlider').value=76400;runBudgetModel();}
+function setBMSort(k){bmSortKey=k;['lta','spend','subs'].forEach(x=>document.getElementById('bmSort'+x.charAt(0).toUpperCase()+x.slice(1)).classList.remove('active'));document.getElementById('bmSort'+k.charAt(0).toUpperCase()+k.slice(1)).classList.add('active');runBudgetModel();}
+
+/* ─── CAMPAIGNS ─── */
+function handleFile(file){
+  if(!file)return;
+  document.getElementById('campFileName').textContent=file.name;
+  const reader=new FileReader();
+  reader.onload=e=>parseCampaignCSV(e.target.result);
+  reader.readAsText(file);
+}
+
+/* ─── CSV PARSER ─── */
+function parseCampaignCSV(text){
+  const lines=text.trim().split('\n');
+  // Find real header row: must contain "campaign" AND a data column
+  let headerIdx=-1;
+  for(let i=0;i<Math.min(15,lines.length);i++){
+    const l=lines[i].toLowerCase();
+    if(l.includes('campaign')&&(l.includes('clicks')||l.includes('impr')||l.includes('ctr'))){headerIdx=i;break;}
+  }
+  if(headerIdx===-1){alert('Could not find a header row. Make sure this is a Google Ads CSV export.');return;}
+
+  const parseCSVLine=line=>{
+    const r=[];let cur='',inQ=false;
+    for(const ch of line){
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){r.push(cur.trim());cur='';}
+      else{cur+=ch;}
+    }
+    r.push(cur.trim());return r;
+  };
+
+  const headers=parseCSVLine(lines[headerIdx]).map(h=>h.replace(/['"]/g,'').trim().toLowerCase());
+  const clean=s=>parseFloat((s||'0').replace(/["$,%\s]/g,'').replace(/^-+$/,'0'))||0;
+
+  // Detect date column: "day", "week", "month"
+  const dateCol=headers.find(h=>['day','week','month'].includes(h))||null;
+
+  // Extract state from AVE_PL-GOO_US-California_Search_Brand_Mon naming
+  const extractState=name=>{
+    const m=name.match(/US-([^_]+)_/);
+    if(!m)return'Unknown';
+    const seg=m[1];
+    if(seg==='ROS')return'National';
+    return seg.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g,'$1 $2');
+  };
+  const extractType=name=>{
+    if(name.includes('_Brand_'))return'Brand';
+    if(name.includes('_Generic_'))return'Generic';
+    if(name.includes('_BusinessSearch_'))return'Business Search';
+    if(name.includes('_Competitor_'))return'Competitor';
+    return'Other';
+  };
+
+  const rows=[];
+  for(let i=headerIdx+1;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line||line.toLowerCase().startsWith('total')||line.startsWith('--')||line.startsWith('"--'))continue;
+    const vals=parseCSVLine(line);
+    if(vals.length<3)continue;
+    const obj={};
+    headers.forEach((h,j)=>{obj[h]=(vals[j]||'').replace(/^"|"$/g,'').trim();});
+    if(obj['campaign'])rows.push(obj);
+  }
+  if(rows.length===0){alert('No campaign rows found after the header.');return;}
+
+  // Detect impression share columns — handles Google Ads naming variations
+  // e.g. "Search impr. share", "Search lost IS (budget)", "Search lost IS (rank)"
+  const isShareCol=headers.find(h=>h.includes('share')&&!h.includes('lost')&&!h.includes('abs')&&!h.includes('top'))||null;
+  const isBudgetCol=headers.find(h=>h.includes('budget')&&(h.includes('lost')||h.includes('loss')))||null;
+  const isRankCol=headers.find(h=>h.includes('rank')&&(h.includes('lost')||h.includes('loss')))||null;
+  const hasISCols=!!(isShareCol||isBudgetCol||isRankCol);
+
+  // Parse IS value: "45.67%" → 45.67, "--" (below 10% threshold) → null
+  const parseIS=s=>{const v=parseFloat((s||'').replace(/["%,\s]/g,''));return isNaN(v)?null:v;};
+
+  // Build campData (aggregated — per campaign across all dates)
+  const aggMap={};
+  rows.forEach(r=>{
+    const name=r['campaign']||'Unknown';
+    const rowImpr=clean(r['impr.']||r['impr']||r['impressions']||'0');
+    if(!aggMap[name]){
+      aggMap[name]={name,state:extractState(name),type:extractType(name),
+        clicks:0,impr:0,cost:0,conv:0,ctrSum:0,n:0,
+        isShareWt:0,isBudgetWt:0,isRankWt:0,isWtTotal:0};
+    }
+    const a=aggMap[name];
+    a.clicks+=clean(r['clicks']);
+    a.impr+=rowImpr;
+    a.cost+=clean(r['cost']);
+    a.conv+=clean(r['conversions']||r['conv.']);
+    a.ctrSum+=clean(r['ctr']);
+    a.n++;
+    // IS weighted average by impressions
+    if(hasISCols&&rowImpr>0){
+      const sv=isShareCol?parseIS(r[isShareCol]):null;
+      const bv=isBudgetCol?parseIS(r[isBudgetCol]):null;
+      const rv=isRankCol?parseIS(r[isRankCol]):null;
+      if(sv!==null){a.isShareWt+=sv*rowImpr;}
+      if(bv!==null){a.isBudgetWt+=bv*rowImpr;}
+      if(rv!==null){a.isRankWt+=rv*rowImpr;}
+      a.isWtTotal+=rowImpr;
+    }
+  });
+
+  campData=Object.values(aggMap).map(a=>{
+    const ctr=a.impr>0?(a.clicks/a.impr*100):0;
+    const cpc=a.clicks>0?(a.cost/a.clicks):0;
+    const convRate=a.clicks>0?(a.conv/a.clicks*100):0;
+    const is=hasISCols&&a.isWtTotal>0?+(a.isShareWt/a.isWtTotal).toFixed(2):null;
+    const isBudget=hasISCols&&a.isWtTotal>0?+(a.isBudgetWt/a.isWtTotal).toFixed(2):null;
+    const isRank=hasISCols&&a.isWtTotal>0?+(a.isRankWt/a.isWtTotal).toFixed(2):null;
+    return{...a,ctr,cpc,convRate,is,isBudget,isRank};
+  }).filter(r=>r.cost>0||r.clicks>0);
+
+  if(campData.length===0){alert('No valid rows found — all have zero cost and clicks.');return;}
+
+  // Build dated data if date column exists
+  campDataDated=[];
+  if(dateCol){
+    rows.forEach(r=>{
+      const dateStr=r[dateCol]||'';
+      const dateObj=parseGADate(dateStr);
+      const name=r['campaign']||'Unknown';
+      const clicks=clean(r['clicks']);
+      const impr=clean(r['impr.']||r['impr']||r['impressions']||'0');
+      const cost=clean(r['cost']);
+      const conv=clean(r['conversions']||r['conv.']);
+      const is=isShareCol?parseIS(r[isShareCol]):null;
+      const isBudget=isBudgetCol?parseIS(r[isBudgetCol]):null;
+      const isRank=isRankCol?parseIS(r[isRankCol]):null;
+      campDataDated.push({
+        name,state:extractState(name),type:extractType(name),
+        dateStr,dateObj,clicks,impr,cost,conv,is,isBudget,isRank
+      });
+    });
+    // Show date range label
+    const validDates=campDataDated.map(r=>r.dateObj).filter(Boolean).sort((a,b)=>a-b);
+    if(validDates.length>0){
+      const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      document.getElementById('campDateRangeLabel').textContent=
+        `· ${fmt(validDates[0])} – ${fmt(validDates[validDates.length-1])}`;
+    }
+  }
+
+  document.getElementById('uploadArea').style.display='none';
+  document.getElementById('campData').style.display='block';
+  document.getElementById('noDatesNotice').style.display=dateCol?'none':'flex';
+  document.getElementById('periodSection').style.display=dateCol?'block':'none';
+
+  if(dateCol){setPeriodMode('dod');}
+  renderCampaigns();
+}
+
+/* ─── DATE HELPERS ─── */
+function parseGADate(str){
+  str=(str||'').trim();
+  if(!str)return null;
+  // ISO: 2026-01-15
+  if(/^\d{4}-\d{2}-\d{2}$/.test(str)){const d=new Date(str+'T00:00:00');return isNaN(d)?null:d;}
+  // "Jan 15, 2026" or "Jan 1, 2026"
+  const m1=str.match(/^(\w+)\s+(\d{1,2}),\s*(\d{4})$/);
+  if(m1){const d=new Date(`${m1[1]} ${m1[2]}, ${m1[3]}`);return isNaN(d)?null:d;}
+  // "Jan 2026" or "January 2026" (month-only)
+  const m2=str.match(/^(\w+)\s+(\d{4})$/);
+  if(m2){const d=new Date(`${m2[1]} 1, ${m2[2]}`);return isNaN(d)?null:d;}
+  // Fallback
+  const d=new Date(str);return isNaN(d)?null:d;
+}
+function fmtDate(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function fmtDateFull(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function fmtMonth(d){return d.toLocaleDateString('en-US',{month:'short',year:'numeric'});}
+
+/* ─── PERIOD COMPARISON ─── */
+let currentPeriodMode='dod';
+let currentPeriods=null;
+
+function setPeriodMode(mode){
+  currentPeriodMode=mode;
+  ['dod','wow','mom','custom'].forEach(m=>{
+    const b=document.getElementById('mode-'+m);
+    if(b)b.classList.toggle('active',m===mode);
+  });
+  const ci=document.getElementById('customDateInputs');
+  ci.style.display=mode==='custom'?'flex':'none';
+  if(mode!=='custom')runComparison();
+}
+
+function getAutoPeriods(mode){
+  const validDates=campDataDated.map(r=>r.dateObj).filter(Boolean).sort((a,b)=>a-b);
+  if(validDates.length===0)return null;
+  const latest=validDates[validDates.length-1];
+  const earliest=validDates[0];
+
+  if(mode==='dod'){
+    // Most recent day vs day before
+    const unique=[...new Set(campDataDated.map(r=>r.dateStr))].sort();
+    if(unique.length<2)return{a:{start:latest,end:latest,label:fmtDate(latest)},b:{start:latest,end:latest,label:'—'}};
+    const bDate=parseGADate(unique[unique.length-2])||new Date(latest.getTime()-86400000);
+    return{
+      a:{start:latest,end:latest,label:fmtDateFull(latest)},
+      b:{start:bDate,end:bDate,label:fmtDateFull(bDate)}
+    };
+  }
+  if(mode==='wow'){
+    const aEnd=latest;
+    const aStart=new Date(latest);aStart.setDate(aStart.getDate()-6);
+    const bEnd=new Date(aStart);bEnd.setDate(bEnd.getDate()-1);
+    const bStart=new Date(bEnd);bStart.setDate(bStart.getDate()-6);
+    return{
+      a:{start:aStart,end:aEnd,label:`${fmtDate(aStart)} – ${fmtDate(aEnd)}`},
+      b:{start:bStart,end:bEnd,label:`${fmtDate(bStart)} – ${fmtDate(bEnd)}`}
+    };
+  }
+  if(mode==='mom'){
+    const aStart=new Date(latest.getFullYear(),latest.getMonth(),1);
+    const aEnd=new Date(latest.getFullYear(),latest.getMonth()+1,0);
+    const bStart=new Date(aStart);bStart.setMonth(bStart.getMonth()-1);
+    const bEnd=new Date(aStart);bEnd.setDate(0);
+    return{
+      a:{start:aStart,end:aEnd,label:fmtMonth(aStart)},
+      b:{start:bStart,end:bEnd,label:fmtMonth(bStart)}
+    };
+  }
+  return null;
+}
+
+function aggregatePeriod(start,end){
+  const rows=campDataDated.filter(r=>{
+    if(!r.dateObj)return false;
+    // zero out time for comparison
+    const d=new Date(r.dateObj);d.setHours(0,0,0,0);
+    const s=new Date(start);s.setHours(0,0,0,0);
+    const e=new Date(end);e.setHours(23,59,59,999);
+    return d>=s&&d<=e;
+  });
+  if(rows.length===0)return null;
+  const totalCost=rows.reduce((s,r)=>s+r.cost,0);
+  const totalClicks=rows.reduce((s,r)=>s+r.clicks,0);
+  const totalImpr=rows.reduce((s,r)=>s+r.impr,0);
+  const totalConv=rows.reduce((s,r)=>s+r.conv,0);
+  return{
+    totalCost,totalClicks,totalImpr,totalConv,
+    avgCTR:totalImpr>0?totalClicks/totalImpr*100:0,
+    avgCPC:totalClicks>0?totalCost/totalClicks:0,
+    avgConvRate:totalClicks>0?totalConv/totalClicks*100:0,
+    rows
+  };
+}
+
+function runComparison(){
+  let periods=null;
+  if(currentPeriodMode==='custom'){
+    const as=document.getElementById('customAStart').value;
+    const ae=document.getElementById('customAEnd').value;
+    const bs=document.getElementById('customBStart').value;
+    const be=document.getElementById('customBEnd').value;
+    if(!as||!ae||!bs||!be)return;
+    const aStart=new Date(as),aEnd=new Date(ae),bStart=new Date(bs),bEnd=new Date(be);
+    periods={
+      a:{start:aStart,end:aEnd,label:`${fmtDate(aStart)} – ${fmtDate(aEnd)}`},
+      b:{start:bStart,end:bEnd,label:`${fmtDate(bStart)} – ${fmtDate(bEnd)}`}
+    };
+  }else{
+    periods=getAutoPeriods(currentPeriodMode);
+  }
+  if(!periods)return;
+  currentPeriods=periods;
+  document.getElementById('periodALabel').textContent=periods.a.label;
+  document.getElementById('periodBLabel').textContent=periods.b.label;
+  const a=aggregatePeriod(periods.a.start,periods.a.end);
+  const b=aggregatePeriod(periods.b.start,periods.b.end);
+  renderCompKpis(a,b);
+  renderTrendChart(periods);
+}
+
+function renderCompKpis(a,b){
+  const el=document.getElementById('compKpis');
+  if(!a&&!b){el.innerHTML='<div style="color:var(--text3);font-size:12px;grid-column:1/-1;">No data found for the selected periods. Try a different range or mode.</div>';return;}
+  const safeB=b||{totalCost:0,totalClicks:0,totalImpr:0,totalConv:0,avgCTR:0,avgCPC:0,avgConvRate:0};
+  const safeA=a||{totalCost:0,totalClicks:0,totalImpr:0,totalConv:0,avgCTR:0,avgCPC:0,avgConvRate:0};
+  const metrics=[
+    {label:'Spend',aVal:safeA.totalCost,bVal:safeB.totalCost,fmt:v=>'$'+v.toLocaleString(undefined,{maximumFractionDigits:0}),higherBetter:false},
+    {label:'Clicks',aVal:safeA.totalClicks,bVal:safeB.totalClicks,fmt:v=>v.toLocaleString(),higherBetter:true},
+    {label:'Impressions',aVal:safeA.totalImpr,bVal:safeB.totalImpr,fmt:v=>(v/1000).toFixed(1)+'k',higherBetter:true},
+    {label:'CTR',aVal:safeA.avgCTR,bVal:safeB.avgCTR,fmt:v=>v.toFixed(2)+'%',higherBetter:true},
+    {label:'Conversions',aVal:safeA.totalConv,bVal:safeB.totalConv,fmt:v=>v.toFixed(1),higherBetter:true},
+    {label:'Avg CPC',aVal:safeA.avgCPC,bVal:safeB.avgCPC,fmt:v=>'$'+v.toFixed(2),higherBetter:false},
+  ];
+  el.innerHTML=metrics.map(m=>{
+    const delta=m.bVal>0?((m.aVal-m.bVal)/Math.abs(m.bVal))*100:0;
+    const isGood=(m.higherBetter&&delta>0.1)||(!m.higherBetter&&delta<-0.1);
+    const isNeutral=Math.abs(delta)<0.1;
+    const cls=isNeutral?'delta-neu':isGood?'delta-up':'delta-down';
+    const arrow=delta>0.1?'↑':delta<-0.1?'↓':'→';
+    return`<div class="comp-kpi">
+      <div class="comp-kpi-label">${m.label}</div>
+      <div class="comp-kpi-cur">${m.fmt(m.aVal)}</div>
+      <div class="comp-kpi-prev">prev: ${m.fmt(m.bVal)}</div>
+      <div class="comp-kpi-delta ${cls}">${arrow} ${Math.abs(delta).toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTrendChart(periods){
+  const metric=(document.getElementById('trendMetric')||{value:'cost'}).value;
+  const gc='rgba(255,255,255,0.05)',tc='#555c67';
+
+  const getDailyPoints=(start,end)=>{
+    const dateMap={};
+    campDataDated.forEach(r=>{
+      if(!r.dateObj)return;
+      const d=new Date(r.dateObj);d.setHours(0,0,0,0);
+      const s=new Date(start);s.setHours(0,0,0,0);
+      const e=new Date(end);e.setHours(23,59,59,999);
+      if(d<s||d>e)return;
+      const key=r.dateStr;
+      if(!dateMap[key])dateMap[key]={cost:0,clicks:0,impr:0,conv:0};
+      dateMap[key].cost+=r.cost;
+      dateMap[key].clicks+=r.clicks;
+      dateMap[key].impr+=r.impr;
+      dateMap[key].conv+=r.conv;
+    });
+    return Object.entries(dateMap).sort((a,b)=>a[0].localeCompare(b[0])).map(([,v])=>{
+      if(metric==='cost')return v.cost;
+      if(metric==='clicks')return v.clicks;
+      if(metric==='conv')return v.conv;
+      if(metric==='ctr')return v.impr>0?v.clicks/v.impr*100:0;
+      return 0;
+    });
+  };
+
+  const aData=getDailyPoints(periods.a.start,periods.a.end);
+  const bData=getDailyPoints(periods.b.start,periods.b.end);
+  const maxLen=Math.max(aData.length,bData.length,1);
+  const labels=Array.from({length:maxLen},(_,i)=>`Day ${i+1}`);
+
+  if(chartReg['trendChart'])chartReg['trendChart'].destroy();
+  const metricFmt={cost:v=>'$'+v.toLocaleString(undefined,{maximumFractionDigits:0}),clicks:v=>v.toLocaleString(),conv:v=>v.toFixed(1),ctr:v=>v.toFixed(2)+'%'};
+  const yFmt={cost:v=>'$'+(v/1000).toFixed(1)+'k',clicks:v=>v,conv:v=>v.toFixed(1),ctr:v=>v.toFixed(1)+'%'};
+  chartReg['trendChart']=new Chart(document.getElementById('trendChart'),{type:'line',
+    data:{labels,datasets:[
+      {label:'Current',data:aData,borderColor:'#2ecc8a',backgroundColor:'rgba(46,204,138,0.07)',tension:0.3,pointRadius:3,pointBackgroundColor:'#2ecc8a',fill:true,borderWidth:2},
+      {label:'Previous',data:bData,borderColor:'#555c67',backgroundColor:'transparent',tension:0.3,pointRadius:3,borderDash:[4,3],borderWidth:1.5}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${(metricFmt[metric]||String)(ctx.parsed.y)}`}}},
+      scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc},border:{color:'transparent'}},y:{ticks:{color:tc,callback:yFmt[metric]||String},grid:{color:gc},border:{color:'transparent'}}}}});
+}
+
+/* ─── MAIN CAMPAIGN OVERVIEW ─── */
+function renderCampaigns(){
+  const gc='rgba(255,255,255,0.05)',tc='#555c67';
+  const totalCost=campData.reduce((s,r)=>s+r.cost,0);
+  const totalClicks=campData.reduce((s,r)=>s+r.clicks,0);
+  const totalImpr=campData.reduce((s,r)=>s+r.impr,0);
+  const totalConv=campData.reduce((s,r)=>s+r.conv,0);
+  const avgCTR=totalImpr>0?(totalClicks/totalImpr*100):0;
+  const avgCPC=totalClicks>0?(totalCost/totalClicks):0;
+  const totalConvRate=totalClicks>0?(totalConv/totalClicks*100):0;
+
+  document.getElementById('campKpis').innerHTML=`
+    <div class="camp-kpi"><div class="camp-kpi-label">Total spend</div><div class="camp-kpi-val">$${totalCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div>
+    <div class="camp-kpi"><div class="camp-kpi-label">Total clicks</div><div class="camp-kpi-val">${totalClicks.toLocaleString()}</div></div>
+    <div class="camp-kpi"><div class="camp-kpi-label">Impressions</div><div class="camp-kpi-val">${(totalImpr/1000).toFixed(1)}k</div></div>
+    <div class="camp-kpi"><div class="camp-kpi-label">Avg CTR</div><div class="camp-kpi-val" style="${avgCTR>=5?'color:var(--green)':avgCTR>=2?'color:var(--acc)':'color:var(--red)'}">${avgCTR.toFixed(2)}%</div></div>
+    <div class="camp-kpi"><div class="camp-kpi-label">Conversions</div><div class="camp-kpi-val">${totalConv.toFixed(1)}</div></div>
+    <div class="camp-kpi"><div class="camp-kpi-label">Avg CPC</div><div class="camp-kpi-val">$${avgCPC.toFixed(2)}</div></div>`;
+
+  const shortName=n=>n.replace(/^AVE_PL-GOO_US-/,'').replace(/_Mon$/,'').replace(/_/g,' ');
+
+  // Top campaigns by spend
+  const top12=[...campData].sort((a,b)=>b.cost-a.cost).slice(0,12);
+  if(chartReg['campSpendChart'])chartReg['campSpendChart'].destroy();
+  chartReg['campSpendChart']=new Chart(document.getElementById('campSpendChart'),{type:'bar',
+    data:{labels:top12.map(r=>shortName(r.name)),datasets:[{data:top12.map(r=>r.cost),backgroundColor:top12.map((_,i)=>`hsla(${200+i*15},65%,55%,0.7)`),borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.x.toLocaleString(undefined,{maximumFractionDigits:0})}}},
+      scales:{x:{ticks:{color:tc,callback:v=>'$'+(v/1000).toFixed(1)+'k'},grid:{color:gc},border:{color:'transparent'}},
+              y:{ticks:{color:tc,font:{size:10}},grid:{color:gc},border:{color:'transparent'}}}}});
+
+  // Campaign type donut
+  const typeColors={'Brand':'#2ecc8a','Generic':'#4da6ff','Business Search':'#f0a442','Competitor':'#f05252','Other':'#888780'};
+  const typeOrder=['Brand','Generic','Business Search','Competitor','Other'];
+  const typeSpend={};typeOrder.forEach(t=>{typeSpend[t]=0;});
+  campData.forEach(r=>{if(typeSpend[r.type]!==undefined)typeSpend[r.type]+=r.cost;});
+  const typeLabels=typeOrder.filter(t=>typeSpend[t]>0);
+  const legendEl=document.getElementById('typeChartLegend');legendEl.innerHTML='';
+  typeLabels.forEach(t=>{const e=document.createElement('span');e.style.cssText='display:flex;align-items:center;gap:5px;';
+    e.innerHTML=`<span style="width:10px;height:10px;border-radius:2px;background:${typeColors[t]};flex-shrink:0;"></span>${t}: $${(typeSpend[t]/1000).toFixed(1)}k`;legendEl.appendChild(e);});
+  if(chartReg['campTypeChart'])chartReg['campTypeChart'].destroy();
+  chartReg['campTypeChart']=new Chart(document.getElementById('campTypeChart'),{type:'doughnut',
+    data:{labels:typeLabels,datasets:[{data:typeLabels.map(t=>typeSpend[t]),backgroundColor:typeLabels.map(t=>typeColors[t]),borderWidth:2,borderColor:'#13161b'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString(undefined,{maximumFractionDigits:0})+' ('+((ctx.parsed/totalCost)*100).toFixed(1)+'%)'}}}}});
+
+  // Spend by state
+  const stateSpend={};
+  campData.forEach(r=>{stateSpend[r.state]=(stateSpend[r.state]||0)+r.cost;});
+  const stateEntries=Object.entries(stateSpend).sort((a,b)=>b[1]-a[1]);
+  if(chartReg['campStateChart'])chartReg['campStateChart'].destroy();
+  chartReg['campStateChart']=new Chart(document.getElementById('campStateChart'),{type:'bar',
+    data:{labels:stateEntries.map(e=>e[0]),datasets:[{data:stateEntries.map(e=>e[1]),backgroundColor:'#4da6ff88',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.y.toLocaleString(undefined,{maximumFractionDigits:0})}}},
+      scales:{x:{ticks:{color:tc,font:{size:10},maxRotation:40,autoSkip:false},grid:{color:gc},border:{color:'transparent'}},
+              y:{ticks:{color:tc,callback:v=>'$'+(v/1000).toFixed(1)+'k'},grid:{color:gc},border:{color:'transparent'}}}}});
+
+  filterCampTable();
+}
+
+function filterCampTable(){
+  const search=(document.getElementById('campSearch').value||'').toLowerCase();
+  const typeFilter=document.getElementById('campTypeFilter').value;
+  const sortCol=document.getElementById('campSortCol').value;
+  let rows=[...campData];
+  if(search)rows=rows.filter(r=>r.name.toLowerCase().includes(search)||r.state.toLowerCase().includes(search)||r.type.toLowerCase().includes(search));
+  if(typeFilter&&typeFilter!=='all')rows=rows.filter(r=>r.type===typeFilter);
+  if(sortCol==='cost')rows.sort((a,b)=>b.cost-a.cost);
+  else if(sortCol==='clicks')rows.sort((a,b)=>b.clicks-a.clicks);
+  else if(sortCol==='conv')rows.sort((a,b)=>b.conv-a.conv);
+  else if(sortCol==='ctr')rows.sort((a,b)=>b.ctr-a.ctr);
+  else if(sortCol==='cpc')rows.sort((a,b)=>b.cpc-a.cpc);
+  const typeClasses={'Brand':'pill-green','Generic':'pill-blue','Business Search':'pill-amber','Competitor':'pill-red','Other':'pill-gray'};
+  const ctrColor=v=>v>=5?'color:var(--green)':v>=2?'color:var(--acc)':'color:var(--red)';
+  const shortName=n=>n.replace(/^AVE_PL-GOO_US-/,'').replace(/_Mon$/,'').replace(/_/g,' ');
+  document.getElementById('campTableTitle').textContent=`${rows.length} campaign${rows.length!==1?'s':''}`;
+  document.getElementById('campHead').innerHTML='<th>Campaign</th><th>State</th><th>Type</th><th>Clicks</th><th>Impr.</th><th>CTR</th><th>Avg CPC</th><th>Cost</th><th>Conv.</th><th>Conv rate</th>';
+  document.getElementById('campBody').innerHTML=rows.map(r=>`<tr>
+    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.name}">${shortName(r.name)}</td>
+    <td style="font-size:12px;">${r.state}</td>
+    <td><span class="pill ${typeClasses[r.type]||'pill-gray'}">${r.type}</span></td>
+    <td class="mono">${r.clicks.toLocaleString()}</td>
+    <td class="mono">${r.impr>0?r.impr.toLocaleString():'—'}</td>
+    <td class="mono" style="${ctrColor(r.ctr)}">${r.ctr.toFixed(2)}%</td>
+    <td class="mono">$${r.cpc.toFixed(2)}</td>
+    <td class="mono">$${r.cost.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+    <td class="mono" style="${r.conv>0?'color:var(--green)':''}">${r.conv.toFixed(1)}</td>
+    <td class="mono">${r.convRate.toFixed(2)}%</td>
+  </tr>`).join('');
+}
+
+/* ─── IMPRESSION SHARE TAB ─── */
+function initISTab(){
+  const hasIS=campData.length>0&&campData.some(r=>r.is!==null);
+  document.getElementById('isNoData').style.display=hasIS?'none':'block';
+  document.getElementById('isDataView').style.display=hasIS?'block':'none';
+  if(!hasIS)return;
+  renderImpressionShare();
+  initISMap();
+}
+
+function renderImpressionShare(){
+  const rows=campData.filter(r=>r.is!==null||r.isBudget!==null||r.isRank!==null);
+  if(!rows.length)return;
+  const gc='rgba(255,255,255,0.05)',tc='#555c67';
+  const shortName=n=>n.replace(/^AVE_PL-GOO_US-/,'').replace(/_Mon$/,'').replace(/_/g,' ');
+  const typeColors={'Brand':'#2ecc8a','Generic':'#4da6ff','Business Search':'#f0a442','Competitor':'#f05252','Other':'#888780'};
+
+  // Portfolio-level weighted averages
+  const totalWt=rows.reduce((s,r)=>s+r.impr,0)||1;
+  const avgIS=rows.reduce((s,r)=>s+(r.is||0)*r.impr,0)/totalWt;
+  const avgBudget=rows.reduce((s,r)=>s+(r.isBudget||0)*r.impr,0)/totalWt;
+  const avgRank=rows.reduce((s,r)=>s+(r.isRank||0)*r.impr,0)/totalWt;
+  const isCol=v=>v>=70?'var(--green)':v>=45?'var(--acc)':'var(--red)';
+  const lossCol=v=>v>20?'var(--red)':v>10?'var(--amber)':'var(--green)';
+
+  document.getElementById('isKpis').innerHTML=`
+    <div class="map-kpi">
+      <div class="mk-label">Avg search IS</div>
+      <div class="mk-val" style="color:${isCol(avgIS)}">${avgIS.toFixed(1)}%</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px;">of eligible impressions captured</div>
+    </div>
+    <div class="map-kpi">
+      <div class="mk-label">Lost to budget</div>
+      <div class="mk-val" style="color:${lossCol(avgBudget)}">${avgBudget.toFixed(1)}%</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px;">recoverable by increasing spend</div>
+    </div>
+    <div class="map-kpi">
+      <div class="mk-label">Lost to rank</div>
+      <div class="mk-val" style="color:${lossCol(avgRank)}">${avgRank.toFixed(1)}%</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px;">recoverable by improving quality/bids</div>
+    </div>`;
+
+  // Brand IS alert
+  const brandRows=rows.filter(r=>r.type==='Brand'&&r.is!==null&&r.is<85);
+  const alertEl=document.getElementById('brandIsAlert');
+  if(brandRows.length>0){
+    alertEl.style.display='block';
+    const list=brandRows.sort((a,b)=>a.is-b.is).map(r=>`${r.state} (${r.is.toFixed(0)}%)`).join(' · ');
+    alertEl.innerHTML=`<strong>Brand IS alert — ${brandRows.length} campaign${brandRows.length>1?'s':''} below 85%:</strong> ${list}<br><span style="color:var(--text2);">Competitors may be bidding on your brand terms. Consider raising brand bids or reviewing the search terms report.</span>`;
+  }else{alertEl.style.display='none';}
+
+  // IS stacked breakdown bar
+  const stackRows=[...rows].filter(r=>r.is!==null).sort((a,b)=>a.is-b.is).slice(-15);
+  document.getElementById('isBreakdownWrap').style.height=Math.max(240,stackRows.length*32+70)+'px';
+  document.getElementById('isBreakdownLegend').innerHTML=[
+    {c:'#2ecc8a',l:'IS captured'},{c:'#f0a442',l:'Lost to budget'},{c:'#f05252',l:'Lost to rank'},{c:'#555c67',l:'Other'},
+  ].map(x=>`<span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:${x.c};flex-shrink:0;"></span>${x.l}</span>`).join('');
+  if(chartReg['isBreakdownChart'])chartReg['isBreakdownChart'].destroy();
+  chartReg['isBreakdownChart']=new Chart(document.getElementById('isBreakdownChart'),{type:'bar',
+    data:{labels:stackRows.map(r=>shortName(r.name)),datasets:[
+      {label:'IS captured',   data:stackRows.map(r=>+(r.is||0).toFixed(1)),           backgroundColor:'#2ecc8a99',stack:'s'},
+      {label:'Lost to budget',data:stackRows.map(r=>+(r.isBudget||0).toFixed(1)),     backgroundColor:'#f0a44299',stack:'s'},
+      {label:'Lost to rank',  data:stackRows.map(r=>+(r.isRank||0).toFixed(1)),       backgroundColor:'#f0525299',stack:'s'},
+      {label:'Other',         data:stackRows.map(r=>+Math.max(0,100-(r.is||0)-(r.isBudget||0)-(r.isRank||0)).toFixed(1)),backgroundColor:'#55585f44',stack:'s'},
+    ]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)}%`}}},
+      scales:{x:{stacked:true,max:100,ticks:{color:tc,callback:v=>v+'%'},grid:{color:gc},border:{color:'transparent'}},
+              y:{stacked:true,ticks:{color:tc,font:{size:10}},grid:{color:gc},border:{color:'transparent'}}}}});
+
+  // IS opportunity matrix
+  const matRows=rows.filter(r=>r.isBudget!==null&&r.isRank!==null);
+  const maxSpend=Math.max(...matRows.map(r=>r.cost),1);
+  const matrixTypes=[...new Set(matRows.map(r=>r.type))];
+  document.getElementById('isMatrixLegend').innerHTML=matrixTypes.map(t=>
+    `<span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:${typeColors[t]||'#888'};flex-shrink:0;"></span>${t}</span>`
+  ).join('');
+  if(chartReg['isOpportunityChart'])chartReg['isOpportunityChart'].destroy();
+  chartReg['isOpportunityChart']=new Chart(document.getElementById('isOpportunityChart'),{type:'bubble',
+    data:{datasets:[{
+      data:matRows.map(r=>({x:+(r.isRank||0).toFixed(1),y:+(r.isBudget||0).toFixed(1),r:Math.max(5,Math.sqrt(r.cost/maxSpend)*24),_d:r})),
+      backgroundColor:matRows.map(r=>(typeColors[r.type]||'#888')+'66'),
+      borderColor:matRows.map(r=>typeColors[r.type]||'#888'),borderWidth:1.5
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:26,right:16,bottom:8,left:8}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const d=ctx.raw._d;return[` ${shortName(d.name)}`,` IS: ${(d.is||0).toFixed(1)}%  Budget: ${(d.isBudget||0).toFixed(1)}%  Rank: ${(d.isRank||0).toFixed(1)}%`];}}}},
+      scales:{
+        x:{min:0,max:65,title:{display:true,text:'Lost to rank (%)',color:tc,font:{size:11}},ticks:{color:tc,callback:v=>v+'%'},grid:{color:gc},border:{color:'transparent'}},
+        y:{min:0,max:65,title:{display:true,text:'Lost to budget (%)',color:tc,font:{size:11}},ticks:{color:tc,callback:v=>v+'%'},grid:{color:gc},border:{color:'transparent'}}
+      }},
+    plugins:[{id:'isQuad',afterDraw(chart){
+      const{ctx:cv,chartArea:{left,right,top,bottom},scales}=chart;
+      const mx=scales.x.getPixelForValue(20),my=scales.y.getPixelForValue(20);
+      cv.save();cv.setLineDash([4,4]);cv.strokeStyle='rgba(255,255,255,0.08)';cv.lineWidth=1;
+      cv.beginPath();cv.moveTo(mx,top);cv.lineTo(mx,bottom);cv.stroke();
+      cv.beginPath();cv.moveTo(left,my);cv.lineTo(right,my);cv.stroke();
+      cv.setLineDash([]);cv.font='500 10px DM Mono,monospace';
+      cv.fillStyle='#f0a442';cv.fillText('↑ Increase budget',mx+6,top+14);
+      cv.fillStyle='#f05252';cv.fillText('↑ Both needed',right-88,top+14);
+      cv.fillStyle='#2ecc8a';cv.fillText('✓ Optimised',left+6,bottom-6);
+      cv.fillStyle='#4da6ff';cv.fillText('→ Improve quality/bids',mx+6,bottom-6);
+      cv.restore();
+    }}]
+  });
+}
+
+/* ─── IS STATE MAP ─── */
+const IS_MAP_RAMP=['#0e1a2e','#102040','#123060','#1a4a8a','#2468b8','#3a8dd4','#55aaf0','#80c8ff'];
+
+function isToColor(val){
+  if(val===null||val<0)return'#1a1e25';
+  return d3.interpolateRgbBasis(IS_MAP_RAMP)(Math.min(val/100,1)*0.9+0.05);
+}
+
+function getStateISMap(dateStr){
+  // Aggregate IS by state — from dated data if dateStr provided, else from overall campData
+  const map={};
+  if(dateStr&&campDataDated.length>0){
+    campDataDated.filter(r=>r.dateStr===dateStr&&r.state!=='National'&&r.state!=='Unknown'&&r.is!==null).forEach(r=>{
+      if(!map[r.state])map[r.state]={isWt:0,wt:0};
+      map[r.state].isWt+=r.is*r.impr;map[r.state].wt+=r.impr;
+    });
+  }else{
+    campData.filter(r=>r.state!=='National'&&r.state!=='Unknown'&&r.is!==null).forEach(r=>{
+      if(!map[r.state])map[r.state]={isWt:0,wt:0};
+      map[r.state].isWt+=r.is*r.impr;map[r.state].wt+=r.impr;
+    });
+  }
+  const result={};
+  Object.entries(map).forEach(([s,v])=>{result[s]=v.wt>0?v.isWt/v.wt:null;});
+  return result;
+}
+
+function updateISMapKpis(stateIS,label){
+  const vals=Object.values(stateIS).filter(v=>v!==null);
+  const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+  const top=Object.entries(stateIS).filter(([,v])=>v!==null).sort((a,b)=>b[1]-a[1])[0];
+  const low=Object.entries(stateIS).filter(([,v])=>v!==null).sort((a,b)=>a[1]-b[1])[0];
+  document.getElementById('isMapKpis').innerHTML=`
+    <div class="map-kpi"><div class="mk-label">Viewing</div><div class="mk-val" style="color:#a78bfa;font-size:15px;">${label}</div></div>
+    <div class="map-kpi"><div class="mk-label">States active</div><div class="mk-val">${vals.length}</div></div>
+    <div class="map-kpi"><div class="mk-label">Avg IS (active)</div><div class="mk-val">${avg.toFixed(1)}%</div></div>
+    <div class="map-kpi"><div class="mk-label">Top state</div><div class="mk-val" style="font-size:13px;">${top?top[0]+' — '+top[1].toFixed(1)+'%':'—'}</div></div>`;
+}
+
+function updateISMap(idx){
+  isMapDateIdx=idx;
+  const dates=getISDateList();
+  const dateStr=dates[idx]||null;
+  const label=dateStr||'All time';
+  document.getElementById('isSliderLabel').textContent=label;
+  document.getElementById('isMapSlider').value=idx;
+  document.querySelectorAll('.is-tick').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  const stateIS=getStateISMap(dateStr);
+  updateISMapKpis(stateIS,label);
+  if(isMapReady&&isMapSvgSel){
+    isMapSvgSel.selectAll('.is-state-path').transition().duration(400).ease(d3.easeQuadInOut)
+      .attr('fill',function(){return isToColor(stateIS[this.getAttribute('data-state')]??null);});
+  }
+}
+
+function getISDateList(){
+  if(!campDataDated.length||!campDataDated.some(r=>r.is!==null))return[];
+  return[...new Set(campDataDated.filter(r=>r.is!==null).map(r=>r.dateStr))].sort();
+}
+
+function toggleISPlay(){
+  const btn=document.getElementById('isPlayBtn');
+  if(isMapPlayInterval){clearInterval(isMapPlayInterval);isMapPlayInterval=null;btn.innerHTML='&#9654; Play';return;}
+  btn.innerHTML='&#9646;&#9646; Pause';
+  const dates=getISDateList();
+  if(!dates.length)return;
+  let idx=isMapDateIdx;
+  isMapPlayInterval=setInterval(()=>{
+    idx=(idx+1)%dates.length;
+    updateISMap(idx);
+    if(idx===dates.length-1){clearInterval(isMapPlayInterval);isMapPlayInterval=null;btn.innerHTML='&#9654; Play';}
+  },1000);
+}
+
+function initISMap(){
+  // Build map legend
+  const legEl=document.getElementById('isMapLegendScale');legEl.innerHTML='';
+  for(let i=0;i<=14;i++){
+    const d=document.createElement('div');
+    d.style.cssText=`width:26px;height:9px;background:${d3.interpolateRgbBasis(IS_MAP_RAMP)(i/14*0.9+0.05)};`;
+    legEl.appendChild(d);
+  }
+
+  // Check for dated IS data
+  const dates=getISDateList();
+  const hasDatedIS=dates.length>0;
+  const sliderEl=document.getElementById('isTimeSlider');
+  sliderEl.style.display=hasDatedIS?'block':'none';
+  document.getElementById('isMapSubtitle').textContent=hasDatedIS?`${dates.length} time periods available — use slider to track IS over time`:'Weighted average across all campaigns';
+
+  if(hasDatedIS){
+    const slider=document.getElementById('isMapSlider');
+    slider.max=dates.length-1;slider.value=dates.length-1;isMapDateIdx=dates.length-1;
+    document.getElementById('isSliderLabel').textContent=dates[dates.length-1];
+    const tickEl=document.getElementById('isSliderTicks');tickEl.innerHTML='';
+    // Show up to 6 tick labels
+    const step=Math.max(1,Math.floor(dates.length/6));
+    dates.forEach((d,i)=>{
+      if(i%step===0||i===dates.length-1){
+        const t=document.createElement('span');
+        t.className='is-tick slider-tick'+(i===dates.length-1?' active':'');
+        t.textContent=d;t.style.fontSize='10px';
+        t.onclick=()=>updateISMap(i);
+        tickEl.appendChild(t);
+      }
+    });
+  }
+
+  const stateIS=getStateISMap(hasDatedIS?dates[dates.length-1]:null);
+  updateISMapKpis(stateIS,hasDatedIS?dates[dates.length-1]:'All time');
+
+  const container=document.getElementById('is-map-svg-container');
+
+  const renderMap=topology=>{
+    container.innerHTML='';
+    const features=topojson.feature(topology,topology.objects.states);
+    isMapSvgSel=d3.select(container).append('svg')
+      .attr('viewBox','0 0 900 560').attr('preserveAspectRatio','xMidYMid meet').style('width','100%');
+    const proj=d3.geoAlbersUsa().scale(1100).translate([450,280]);
+    const pathGen=d3.geoPath(proj);
+    const tt=document.getElementById('mapTooltip'); // reuse existing tooltip element
+    isMapSvgSel.selectAll('path').data(features.features).join('path')
+      .attr('class','is-state-path').attr('d',pathGen)
+      .attr('stroke','#0d0f12').attr('stroke-width',0.6)
+      .attr('data-state',d=>d.properties.name)
+      .attr('fill',d=>isToColor(stateIS[d.properties.name]??null))
+      .style('cursor','pointer')
+      .on('mousemove',function(event,d){
+        const name=d.properties.name;
+        const val=stateIS[name];
+        const camp=campData.find(r=>r.state===name);
+        const budgetStr=camp&&camp.isBudget!==null?` Budget loss: ${camp.isBudget.toFixed(1)}%`:'';
+        const rankStr=camp&&camp.isRank!==null?` Rank loss: ${camp.isRank.toFixed(1)}%`:'';
+        tt.innerHTML=`<div class="tt-state">${name}</div>
+          <div class="tt-row"><span class="tt-key">Search IS</span><span class="tt-val" style="color:${val!==null?'#a78bfa':'#555c67'}">${val!==null?val.toFixed(1)+'%':'No data'}</span></div>
+          ${budgetStr?`<div class="tt-row"><span class="tt-key">Lost to budget</span><span class="tt-val">${budgetStr.trim()}</span></div>`:''}
+          ${rankStr?`<div class="tt-row"><span class="tt-key">Lost to rank</span><span class="tt-val">${rankStr.trim()}</span></div>`:''}`;
+        tt.style.left=(event.clientX+16)+'px';tt.style.top=Math.max(10,event.clientY-50)+'px';
+        tt.classList.add('show');
+      })
+      .on('mouseleave',()=>tt.classList.remove('show'));
+    isMapReady=true;
+  };
+
+  if(cachedUSTopology){renderMap(cachedUSTopology);return;}
+  d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(us=>{
+    cachedUSTopology=us;
+    renderMap(us);
+  }).catch(()=>{
+    container.innerHTML='<span style="color:var(--red);font-size:13px;">Could not load map. Check your internet connection.</span>';
+  });
+}
+
+
+function resetCampaigns(){
+  campData=[];campDataDated=[];
+  ['campSpendChart','campTypeChart','campStateChart','trendChart','isBreakdownChart','isOpportunityChart'].forEach(id=>{if(chartReg[id]){chartReg[id].destroy();delete chartReg[id];}});
+  document.getElementById('campData').style.display='none';
+  document.getElementById('uploadArea').style.display='block';
+  document.getElementById('campFileName').textContent='';
+  document.getElementById('campDateRangeLabel').textContent='';
+  // Reset IS tab
+  isMapReady=false;isMapSvgSel=null;isMapDateIdx=0;
+  if(isMapPlayInterval){clearInterval(isMapPlayInterval);isMapPlayInterval=null;}
+  document.getElementById('isNoData').style.display='block';
+  document.getElementById('isDataView').style.display='none';
+  const isc=document.getElementById('is-map-svg-container');
+  if(isc)isc.innerHTML='<span style="color:var(--text3);font-size:13px;">Loading map…</span>';
+}
+
+// Drag and drop — campaigns standalone upload zone
+document.addEventListener('DOMContentLoaded',()=>{
+  const zone=document.getElementById('uploadZone');
+  if(zone){
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});
+    zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
+    zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+  }
+});
+
+/* ─── STATE BREAKDOWN SUB-TABS ─── */
+let momSortKey='leads';
+
+function switchSubTab(sub){
+  document.getElementById('subtab-breakdown').style.display=sub==='breakdown'?'block':'none';
+  document.getElementById('subtab-mom').style.display=sub==='mom'?'block':'none';
+  document.getElementById('subtab-btn-breakdown').classList.toggle('active',sub==='breakdown');
+  document.getElementById('subtab-btn-mom').classList.toggle('active',sub==='mom');
+  if(sub==='mom')renderMoM();
+}
+
+function setMoMPreset(a,b){
+  document.getElementById('momMonthA').value=a;
+  document.getElementById('momMonthB').value=b;
+  renderMoM();
+}
+
+function setMoMSort(k,e){
+  momSortKey=k;
+  document.querySelectorAll('[id^="momSort-"]').forEach(b=>b.classList.remove('active'));
+  if(e&&e.target)e.target.classList.add('active');
+  renderMoM();
+}
+
+function renderMoM(){
+  const idxA=+document.getElementById('momMonthA').value;
+  const idxB=+document.getElementById('momMonthB').value;
+  const mA=MONTHS[idxA], mB=MONTHS[idxB];
+  const gc='rgba(255,255,255,0.05)',tc='#555c67';
+  const states=PAID_STATES;
+
+  // Build per-state data for each period from ltaByMonth + volData
+  const stateData=states.map(s=>{
+    const leadsA=s.volData[idxA]||0;
+    const leadsB=s.volData[idxB]||0;
+    const ltaA=PAID_LTA[s.state]?.[idxA]||0;
+    const ltaB=PAID_LTA[s.state]?.[idxB]||0;
+    const actA=Math.round(leadsA*(ltaA/100));
+    const actB=Math.round(leadsB*(ltaB/100));
+    const leadsD=leadsA-leadsB;
+    const ltaD=+(ltaA-ltaB).toFixed(2);
+    return{state:s.state,quad:s.quad,leadsA,leadsB,ltaA,ltaB,actA,actB,leadsD,ltaD};
+  });
+
+  // Portfolio totals
+  const totLeadsA=stateData.reduce((s,r)=>s+r.leadsA,0);
+  const totLeadsB=stateData.reduce((s,r)=>s+r.leadsB,0);
+  const totActA=stateData.reduce((s,r)=>s+r.actA,0);
+  const totActB=stateData.reduce((s,r)=>s+r.actB,0);
+  const totLtaA=totLeadsA>0?(totActA/totLeadsA*100):0;
+  const totLtaB=totLeadsB>0?(totActB/totLeadsB*100):0;
+  const leadsChg=totLeadsB>0?((totLeadsA-totLeadsB)/totLeadsB*100):0;
+  const ltaChg=+(totLtaA-totLtaB).toFixed(2);
+
+  const fmt=(v,pos)=>v===0?'<span style="color:var(--text3)">→</span>'
+    :(v>0?`<span style="color:${pos?'var(--green)':'var(--red)'}">↑${Math.abs(v).toFixed(pos?0:1)}${pos?'':' pp'}</span>`
+         :`<span style="color:${pos?'var(--red)':'var(--green)'}">↓${Math.abs(v).toFixed(pos?0:1)}${pos?'':' pp'}</span>`);
+
+  // KPIs
+  const kpiColor=(v,higherBetter)=>v>0?(higherBetter?'var(--green)':'var(--red)'):(v<0?(higherBetter?'var(--red)':'var(--green)'):'var(--text3)');
+  document.getElementById('momKpis').innerHTML=`
+    <div class="bm-kpi"><div class="bm-kpi-label">Total leads · ${mA}</div><div class="bm-kpi-val">${totLeadsA.toLocaleString()}</div><div class="bm-kpi-sub">vs ${totLeadsB.toLocaleString()} in ${mB}</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">Lead change</div><div class="bm-kpi-val" style="color:${kpiColor(leadsChg,true)}">${leadsChg>=0?'+':''}${leadsChg.toFixed(1)}%</div><div class="bm-kpi-sub">month on month</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">National LTA% · ${mA}</div><div class="bm-kpi-val" style="color:${totLtaA>=5?'var(--green)':'var(--red)'}">${totLtaA.toFixed(2)}%</div><div class="bm-kpi-sub">vs ${totLtaB.toFixed(2)}% in ${mB}</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">LTA% change</div><div class="bm-kpi-val" style="color:${kpiColor(ltaChg,true)}">${ltaChg>=0?'+':''}${ltaChg.toFixed(2)} pp</div><div class="bm-kpi-sub">percentage points</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">Activated · ${mA}</div><div class="bm-kpi-val">${totActA}</div><div class="bm-kpi-sub">vs ${totActB} in ${mB}</div></div>`;
+
+  // Chart data — top 12 states by current leads
+  const top12=[...stateData].sort((a,b)=>b.leadsA-a.leadsA).slice(0,12);
+
+  // Leads bar chart
+  const ll=document.getElementById('momLeadLegend');
+  ll.innerHTML=`<span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#2ecc8a;flex-shrink:0;"></span>${mA}</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#555c67;flex-shrink:0;"></span>${mB}</span>`;
+  if(chartReg['momLeadsChart'])chartReg['momLeadsChart'].destroy();
+  chartReg['momLeadsChart']=new Chart(document.getElementById('momLeadsChart'),{type:'bar',
+    data:{labels:top12.map(r=>r.state),datasets:[
+      {label:mA,data:top12.map(r=>r.leadsA),backgroundColor:'#2ecc8a88',borderRadius:3},
+      {label:mB,data:top12.map(r=>r.leadsB),backgroundColor:'#55585f88',borderRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:tc,font:{size:10},maxRotation:40,autoSkip:false},grid:{color:gc},border:{color:'transparent'}},
+              y:{ticks:{color:tc},grid:{color:gc},border:{color:'transparent'}}}}});
+
+  // LTA% bar chart
+  const ltaL=document.getElementById('momLtaLegend');
+  ltaL.innerHTML=ll.innerHTML;
+  if(chartReg['momLtaChart'])chartReg['momLtaChart'].destroy();
+  chartReg['momLtaChart']=new Chart(document.getElementById('momLtaChart'),{type:'bar',
+    data:{labels:top12.map(r=>r.state),datasets:[
+      {label:mA,data:top12.map(r=>+r.ltaA.toFixed(2)),backgroundColor:'#2ecc8a88',borderRadius:3},
+      {label:mB,data:top12.map(r=>+r.ltaB.toFixed(2)),backgroundColor:'#55585f88',borderRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:tc,font:{size:10},maxRotation:40,autoSkip:false},grid:{color:gc},border:{color:'transparent'}},
+              y:{ticks:{color:tc,callback:v=>v+'%'},grid:{color:gc},border:{color:'transparent'}}}}});
+
+  // Table headers
+  document.getElementById('momHeadA').textContent=mA;
+  document.getElementById('momHeadB').textContent=mB;
+  document.getElementById('momTableTitle').textContent=`State comparison — ${mA} vs ${mB}`;
+
+  // Sort
+  let sorted=[...stateData].filter(r=>r.leadsA>0||r.leadsB>0);
+  if(momSortKey==='leads')sorted.sort((a,b)=>b.leadsD-a.leadsD);
+  else if(momSortKey==='lta')sorted.sort((a,b)=>b.ltaD-a.ltaD);
+  else if(momSortKey==='abs')sorted.sort((a,b)=>b.leadsA-a.leadsA);
+
+  const qColors={scale:'#2ecc8a',fix:'#4da6ff',nurture:'#f0a442',pause:'#f05252'};
+  const ltaColor=v=>v>=5?'color:var(--green)':v>=2?'color:var(--acc)':v>0?'color:var(--amber)':'color:var(--text3)';
+  const PC={scale:'pill-green',fix:'pill-blue',nurture:'pill-amber',pause:'pill-red'};
+
+  document.getElementById('momBody').innerHTML=sorted.map(r=>`<tr>
+    <td>${r.state}</td>
+    <td style="font-size:10px;color:var(--text3);font-family:var(--mono);">${mA}</td>
+    <td class="mono">${r.leadsA}</td>
+    <td class="mono" style="${ltaColor(r.ltaA)}">${r.ltaA.toFixed(1)}%</td>
+    <td class="mono">${r.actA}</td>
+    <td style="font-size:10px;color:var(--text3);font-family:var(--mono);">${mB}</td>
+    <td class="mono">${r.leadsB}</td>
+    <td class="mono" style="${ltaColor(r.ltaB)}">${r.ltaB.toFixed(1)}%</td>
+    <td class="mono">${r.actB}</td>
+    <td>${fmt(r.leadsD,true)}</td>
+    <td>${fmt(r.ltaD,false)}</td>
+    <td><span class="pill ${PC[r.quad]}">${QL[r.quad]}</span></td>
+  </tr>`).join('');
+}
+
+/* ─── PACING MODULE ─── */
+const PACING_MARKETS=[
+  'California','Florida','Texas','New York','ROS',
+  'Canada','Mexico','Puerto Rico','Dutch Caribbean'
+];
+
+// Platform spend data stores
+const platformSpend={google:{},meta:{},bing:{}};
+let pacingBudgets={};  // {market:{google,meta,bing}}
+let marketSortKey='var';
+let pacingView='market';
+
+/* ─── BUDGET SETUP ─── */
+function initBudgetTable(){
+  // Load saved budgets from localStorage
+  try{const saved=localStorage.getItem('pacingBudgets_v2');if(saved)pacingBudgets=JSON.parse(saved);}catch(e){}
+  // Set current month/year
+  const now=new Date();
+  const ms=document.getElementById('budgetMonth');
+  const ys=document.getElementById('budgetYear');
+  if(ms)ms.value=now.getMonth();
+  if(ys)ys.value=now.getFullYear();
+  renderBudgetTable();
+}
+
+function renderBudgetTable(){
+  const tbody=document.getElementById('budgetTableBody');
+  if(!tbody)return;
+  tbody.innerHTML=PACING_MARKETS.map(m=>{
+    const b=pacingBudgets[m]||{google:0,meta:0,bing:0};
+    const total=(+b.google||0)+(+b.meta||0)+(+b.bing||0);
+    return`<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:8px 12px;font-weight:500;color:var(--text);">${m}</td>
+      <td style="padding:6px 12px;text-align:right;"><input type="number" min="0" step="100" value="${b.google||''}" placeholder="0" data-market="${m}" data-ch="google" oninput="onBudgetInput(this)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:11px;font-family:var(--mono);color:var(--text);width:90px;text-align:right;outline:none;"></td>
+      <td style="padding:6px 12px;text-align:right;"><input type="number" min="0" step="100" value="${b.meta||''}" placeholder="0" data-market="${m}" data-ch="meta" oninput="onBudgetInput(this)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:11px;font-family:var(--mono);color:var(--text);width:90px;text-align:right;outline:none;"></td>
+      <td style="padding:6px 12px;text-align:right;"><input type="number" min="0" step="100" value="${b.bing||''}" placeholder="0" data-market="${m}" data-ch="bing" oninput="onBudgetInput(this)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:11px;font-family:var(--mono);color:var(--text);width:90px;text-align:right;outline:none;"></td>
+      <td style="padding:8px 12px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--text);">${total>0?'$'+total.toLocaleString():'—'}</td>
+    </tr>`;
+  }).join('');
+  updateBudgetTotals();
+}
+
+function onBudgetInput(el){
+  const m=el.dataset.market,ch=el.dataset.ch;
+  if(!pacingBudgets[m])pacingBudgets[m]={google:0,meta:0,bing:0};
+  pacingBudgets[m][ch]=+el.value||0;
+  // Update row total
+  const row=el.closest('tr');
+  const b=pacingBudgets[m];
+  const total=(+b.google||0)+(+b.meta||0)+(+b.bing||0);
+  row.querySelector('td:last-child').textContent=total>0?'$'+total.toLocaleString():'—';
+  updateBudgetTotals();
+}
+
+function updateBudgetTotals(){
+  let tg=0,tm=0,tb=0;
+  PACING_MARKETS.forEach(m=>{const b=pacingBudgets[m]||{};tg+=+b.google||0;tm+=+b.meta||0;tb+=+b.bing||0;});
+  const f=v=>v>0?'$'+v.toLocaleString():'$0';
+  const eg=document.getElementById('budgetTotalGoogle');const em=document.getElementById('budgetTotalMeta');
+  const ebn=document.getElementById('budgetTotalBing');const et=document.getElementById('budgetTotalAll');
+  if(eg)eg.textContent=f(tg);if(em)em.textContent=f(tm);if(ebn)ebn.textContent=f(tb);if(et)et.textContent=f(tg+tm+tb);
+}
+
+function saveBudgets(){
+  try{localStorage.setItem('pacingBudgets_v2',JSON.stringify(pacingBudgets));}catch(e){}
+  const btn=event.target;btn.textContent='Saved ✓';btn.style.color='var(--green)';
+  setTimeout(()=>{btn.textContent='Save budgets';btn.style.color='';},2000);
+  if(Object.values(platformSpend).some(p=>Object.keys(p).length>0))recalcPacing();
+}
+
+function updateBudgetMonth(){}
+function toggleBudgetEdit(){}
+
+/* ─── PLATFORM FILE HANDLING ─── */
+function handlePlatformDrop(files,platform){
+  const file=files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>parsePlatformCSV(e.target.result,platform,file.name);
+  reader.readAsText(file);
+}
+
+function extractMarketFromName(name){
+  const n=name.toLowerCase();
+
+  // ── Meta naming: meta_mx-mexico_... / meta_ca-canada_... / meta_us-unitedstates_..._MARKET_...
+  if(n.startsWith('meta_')){
+    if(n.includes('mx-mexico')||n.includes('_mx-'))return'Mexico';
+    if(n.includes('ca-canada')||n.includes('_ca-'))return'Canada';
+    if(n.includes('pr-puerto')||n.includes('puertorico')||n.includes('puerto_rico'))return'Puerto Rico';
+    if(n.includes('us-unitedstates')||n.includes('us-usa')){
+      // Market sits immediately after 'conversion_' segment
+      const ci=n.indexOf('conversion_');
+      if(ci>-1){
+        const seg=n.slice(ci+11).split('_')[0].replace(/\s/g,'');
+        if(seg==='ros')return'ROS';
+        if(seg==='newyork')return'New York';
+        if(seg==='california')return'California';
+        if(seg==='florida')return'Florida';
+        if(seg==='texas')return'Texas';
+      }
+      return'ROS'; // US campaign with no recognisable market segment → ROS
+    }
+    return'Other';
+  }
+
+  // ── Non-US country prefixes (Google/Bing) — string includes, not regex, because \b fails after _
+  if(n.includes('_ca-')||n.startsWith('ca-')||n.includes('-canada')||n.includes('_canada'))return'Canada';
+  if(n.includes('_mx_')||n.includes('_mx-')||n.startsWith('mx_')||n.startsWith('mx-')||n.includes('-mexico')||n.includes('_mexico'))return'Mexico';
+  if(n.includes('_pr_')||n.includes('_pr-')||n.startsWith('pr_')||n.startsWith('pr-')||n.includes('puerto'))return'Puerto Rico';
+  if(n.includes('dutchcarib')||n.includes('dutch_carib')||n.includes('_dc_')||n.includes('-dc-'))return'Dutch Caribbean';
+
+  // US- convention: AVE_PL-GOO_US-California_Search_Brand_Mon
+  const m=name.match(/US-([^_\s]+)/i);
+  if(m){
+    const seg=m[1];
+    if(/^ros$/i.test(seg))return'ROS';
+    // Split camelCase: NewYork→New York
+    const split=seg.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g,'$1 $2');
+    // Check against known markets
+    for(const mkt of PACING_MARKETS){
+      if(split.toLowerCase()===mkt.toLowerCase()||seg.toLowerCase()===mkt.toLowerCase().replace(/\s/g,''))return mkt;
+    }
+    return split;
+  }
+
+  // Fallback — scan for market name anywhere in campaign name
+  for(const mkt of PACING_MARKETS){
+    if(n.includes(mkt.toLowerCase().replace(/\s/g,'')))return mkt;
+    if(n.includes(mkt.toLowerCase()))return mkt;
+  }
+  return'Other';
+}
+
+function parsePlatformCSV(text,platform,filename){
+  if(platform==='google')  parseGoogleCSV(text,filename);
+  else if(platform==='meta')parseMetaAdsCSV(text,filename);
+  else if(platform==='bing')parseBingAdsCSV(text,filename);
+}
+
+// ── Shared helpers ──
+const _parseL=line=>{const r=[];let c='',q=false;for(const ch of line){if(ch==='"'){q=!q;}else if(ch===','&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;};
+const _clean=s=>parseFloat((s||'0').replace(/[£$,%"\s]/g,'').replace(/--/g,'0'))||0;
+
+function _findHeader(lines,mustHave,andHave){
+  for(let i=0;i<Math.min(15,lines.length);i++){
+    const l=lines[i].toLowerCase();
+    if(mustHave.every(k=>l.includes(k))&&andHave.some(k=>l.includes(k)))return i;
+  }
+  return -1;
+}
+
+function _colIdx(headers,...names){
+  for(const n of names){const i=headers.findIndex(h=>h===n||h.includes(n));if(i>-1)return i;}
+  return -1;
+}
+
+function _storePlatform(platform,spendByMarket,sortedDates,filename){
+  platformSpend[platform]=spendByMarket;
+  const total=Object.values(spendByMarket).reduce((s,m)=>s+m.mtd,0);
+  const yesterdayTotal=Object.values(spendByMarket).reduce((s,m)=>s+(m.yesterday||0),0);
+  const yesterdayDate=sortedDates[sortedDates.length-1]||'';
+
+  const el=document.getElementById('piStatus-'+platform);
+  const yel=document.getElementById('piYest-'+platform);
+  const card=document.getElementById('pi'+platform.charAt(0).toUpperCase()+platform.slice(1));
+
+  if(el){
+    el.textContent='✓ $'+total.toLocaleString(undefined,{maximumFractionDigits:0})+' MTD';
+    el.style.color='var(--green)';el.style.fontSize='13px';
+  }
+  if(yel){
+    yel.style.display='block';
+    yel.textContent=`Yesterday (${yesterdayDate}): $${yesterdayTotal.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+  }
+  if(card)card.style.borderColor='#2ecc8a44';
+
+  if(sortedDates.length>0){
+    const fd=document.getElementById('pacingDateFrom');
+    const td=document.getElementById('pacingDateTo');
+    if(fd&&!fd.value)fd.value=sortedDates[0];
+    if(td)td.value=sortedDates[sortedDates.length-1];
+  }
+  recalcPacing();
+}
+
+function _aggregateRows(rows,nameIdx,costIdx,dateIdx,clicksIdx,convIdx){
+  const spendByMarket={};
+  const dates=new Set();
+  rows.forEach(vals=>{
+    const campName=vals[nameIdx]||'';
+    if(!campName)return;
+    const market=extractMarketFromName(campName);
+    const cost=_clean(vals[costIdx]);
+    const dateStr=dateIdx>-1?(vals[dateIdx]||'').trim():'';
+    if(!spendByMarket[market])spendByMarket[market]={mtd:0,conv:0,clicks:0,dailySpend:{}};
+    spendByMarket[market].mtd+=cost;
+    if(convIdx>-1)spendByMarket[market].conv+=_clean(vals[convIdx]);
+    if(clicksIdx>-1)spendByMarket[market].clicks+=_clean(vals[clicksIdx]);
+    if(dateStr){
+      dates.add(dateStr);
+      spendByMarket[market].dailySpend[dateStr]=(spendByMarket[market].dailySpend[dateStr]||0)+cost;
+    }
+  });
+  const sorted=[...dates].sort();
+  // Latest date in the file = yesterday (export runs up to and including yesterday)
+  const yesterdayDate=sorted[sorted.length-1]||null;
+  Object.keys(spendByMarket).forEach(m=>{
+    spendByMarket[m].yesterday=yesterdayDate?spendByMarket[m].dailySpend[yesterdayDate]||0:0;
+    delete spendByMarket[m].dailySpend;
+  });
+  return{spendByMarket,sortedDates:sorted};
+}
+
+/* ── Google Ads parser ──
+   Expected columns: Campaign, Day, Clicks, Impr., CTR, [Currency code], Avg. CPC, Cost, Conversions, Conv. rate */
+function parseGoogleCSV(text,filename){
+  const lines=text.trim().split('\n');
+  const hi=_findHeader(lines,['campaign'],['cost','clicks','impr']);
+  if(hi===-1){alert('Google Ads CSV: could not find header row. Ensure this is a Campaign performance report.');return;}
+  const headers=_parseL(lines[hi]).map(h=>h.replace(/['"]/g,'').trim().toLowerCase());
+  const nameIdx=_colIdx(headers,'campaign');
+  const costIdx=_colIdx(headers,'cost');           // exact match 'cost'
+  const dateIdx=_colIdx(headers,'day','week','date');
+  const clicksIdx=_colIdx(headers,'clicks');
+  const convIdx=_colIdx(headers,'conversions','conv.');
+  if(costIdx===-1){alert('Google Ads CSV: could not find "Cost" column. Check your export includes the Cost column.');return;}
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line||line.toLowerCase().startsWith('total')||line.startsWith('--')||line.startsWith('"--'))continue;
+    const vals=_parseL(line);if(vals.length<3)continue;
+    rows.push(vals);
+  }
+  if(!rows.length){alert('Google Ads CSV: no data rows found after header.');return;}
+  const{spendByMarket,sortedDates}=_aggregateRows(rows,nameIdx,costIdx,dateIdx,clicksIdx,convIdx);
+  _storePlatform('google',spendByMarket,sortedDates,filename);
+}
+
+/* ── Meta Ads parser ──
+   Expected columns: Campaign name, [Day], Amount spent, Impressions, Reach, CPM, Link clicks, CPC, Results, Cost per result, Result rate */
+function parseMetaAdsCSV(text,filename){
+  const lines=text.trim().split('\n');
+  const hi=_findHeader(lines,['campaign'],['amount spent','reach','impressions']);
+  if(hi===-1){alert('Meta Ads CSV: could not find header row. Ensure this is an Ads Manager campaign export.');return;}
+  const headers=_parseL(lines[hi]).map(h=>h.replace(/['"]/g,'').trim().toLowerCase());
+  const nameIdx=_colIdx(headers,'campaign name','campaign');
+  const costIdx=_colIdx(headers,'amount spent');
+  const dateIdx=_colIdx(headers,'day','date','reporting starts');
+  const clicksIdx=_colIdx(headers,'link clicks','clicks (all)','clicks');
+  const convIdx=_colIdx(headers,'results');
+  if(costIdx===-1){alert('Meta Ads CSV: could not find "Amount spent" column. Check your export includes Amount spent.');return;}
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line||line.toLowerCase().startsWith('total'))continue;
+    const vals=_parseL(line);if(vals.length<3)continue;
+    rows.push(vals);
+  }
+  if(!rows.length){alert('Meta Ads CSV: no data rows found after header.');return;}
+  const{spendByMarket,sortedDates}=_aggregateRows(rows,nameIdx,costIdx,dateIdx,clicksIdx,convIdx);
+  _storePlatform('meta',spendByMarket,sortedDates,filename);
+}
+
+/* ── Bing / Microsoft Ads parser ──
+   Expected columns: Campaign name, Day, Clicks, Impressions, CTR, Average CPC, Spend, Conversions, Conversion rate */
+function parseBingAdsCSV(text,filename){
+  const lines=text.trim().split('\n');
+  const hi=_findHeader(lines,['campaign'],['spend','clicks','impressions']);
+  if(hi===-1){alert('Bing CSV: could not find header row. Ensure this is a Campaign performance report.');return;}
+  const headers=_parseL(lines[hi]).map(h=>h.replace(/['"]/g,'').trim().toLowerCase());
+  const nameIdx=_colIdx(headers,'campaign name','campaign');
+  const costIdx=_colIdx(headers,'spend');
+  const dateIdx=_colIdx(headers,'day','date');
+  const clicksIdx=_colIdx(headers,'clicks');
+  const convIdx=_colIdx(headers,'conversions');
+  if(costIdx===-1){alert('Bing CSV: could not find "Spend" column. Check your export includes the Spend column.');return;}
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line||line.toLowerCase().startsWith('total')||line.startsWith('--'))continue;
+    const vals=_parseL(line);if(vals.length<3)continue;
+    rows.push(vals);
+  }
+  if(!rows.length){alert('Bing CSV: no data rows found after header.');return;}
+  const{spendByMarket,sortedDates}=_aggregateRows(rows,nameIdx,costIdx,dateIdx,clicksIdx,convIdx);
+  _storePlatform('bing',spendByMarket,sortedDates,filename);
+}
+
+
+
+/* ─── PACING CALCULATION ─── */
+function recalcPacing(){
+  const hasData=Object.values(platformSpend).some(p=>Object.keys(p).length>0);
+  const pd=document.getElementById('pacingDashboard');
+  if(pd)pd.style.display=hasData?'block':'none';
+  if(!hasData)return;
+
+  // Date context
+  const toEl=document.getElementById('pacingDateTo');
+  const today=toEl&&toEl.value?new Date(toEl.value):new Date();
+  const monthStart=new Date(today.getFullYear(),today.getMonth(),1);
+  const monthEnd=new Date(today.getFullYear(),today.getMonth()+1,0);
+  const daysInMonth=monthEnd.getDate();
+  const daysElapsed=Math.min(today.getDate(),daysInMonth);
+  const daysRemaining=daysInMonth-daysElapsed;
+  const pctMonth=daysElapsed/daysInMonth;
+
+  document.getElementById('pacingDateContext').textContent=
+    `Day ${daysElapsed} of ${daysInMonth} · ${daysRemaining} days remaining · ${(pctMonth*100).toFixed(0)}% through month`;
+
+  const fmtC=v=>v==null?'—':'$'+v.toLocaleString(undefined,{maximumFractionDigits:0});
+  const fmtP=v=>v==null?'—':v.toFixed(1)+'%';
+
+  // Build market-level aggregation
+  const markets=PACING_MARKETS.map(mkt=>{
+    const g=platformSpend.google[mkt]||{};
+    const m=platformSpend.meta[mkt]||{};
+    const b=platformSpend.bing[mkt]||{};
+    const gSpend=g.mtd||0,mSpend=m.mtd||0,bSpend=b.mtd||0;
+    const total=gSpend+mSpend+bSpend;
+    const gYest=g.yesterday||0,mYest=m.yesterday||0,bYest=b.yesterday||0;
+    const yesterdayTotal=gYest+mYest+bYest;
+    const budget=pacingBudgets[mkt]||{google:0,meta:0,bing:0};
+    const totalBudget=(+budget.google||0)+(+budget.meta||0)+(+budget.bing||0);
+    const recSpend=totalBudget>0?+(totalBudget*pctMonth).toFixed(0):null;
+    const variance=recSpend!==null?total-recSpend:null;
+    const pctPaced=totalBudget>0?total/totalBudget*100:null;
+    const remaining=totalBudget>0?totalBudget-total:null;
+    const dailyNeeded=daysRemaining>0&&remaining!==null?remaining/daysRemaining:null;
+    return{mkt,gSpend,mSpend,bSpend,total,gYest,mYest,bYest,yesterdayTotal,
+      budget,totalBudget,recSpend,variance,pctPaced,remaining,dailyNeeded};
+  }).filter(r=>r.total>0||r.totalBudget>0);
+
+  // Portfolio totals
+  const totSpend=markets.reduce((s,m)=>s+m.total,0);
+  const totBudget=markets.reduce((s,m)=>s+m.totalBudget,0);
+  const totVar=markets.reduce((s,m)=>s+(m.variance||0),0);
+  const totYest=markets.reduce((s,m)=>s+m.yesterdayTotal,0);
+  const totGoog=markets.reduce((s,m)=>s+m.gSpend,0);
+  const totMeta=markets.reduce((s,m)=>s+m.mSpend,0);
+  const totBing=markets.reduce((s,m)=>s+m.bSpend,0);
+  const pctPaced=totBudget>0?totSpend/totBudget*100:0;
+
+  // KPIs
+  const varColor=totVar>=0?'var(--green)':'var(--red)';
+  document.getElementById('pacingKpis').innerHTML=`
+    <div class="bm-kpi kpi-accent"><div class="bm-kpi-label">Total budget</div><div class="bm-kpi-val">${fmtC(totBudget)}</div><div class="bm-kpi-sub">${markets.filter(m=>m.totalBudget>0).length} markets</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">Total MTD spend</div><div class="bm-kpi-val">${fmtC(totSpend)}</div><div class="bm-kpi-sub">${fmtP(pctPaced)} of budget</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">Portfolio variance</div><div class="bm-kpi-val" style="color:${varColor}">${totVar>=0?'+':''}${fmtC(totVar)}</div><div class="bm-kpi-sub">${totVar>=0?'Ahead':'Behind'} of pace</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">Yesterday spend</div><div class="bm-kpi-val">${fmtC(totYest)}</div><div class="bm-kpi-sub">all markets & channels</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">Budget remaining</div><div class="bm-kpi-val">${fmtC(totBudget-totSpend)}</div><div class="bm-kpi-sub">over ${daysRemaining} days</div></div>
+    <div class="bm-kpi"><div class="bm-kpi-label">Daily run rate needed</div><div class="bm-kpi-val">${daysRemaining>0?fmtC((totBudget-totSpend)/daysRemaining):'—'}</div><div class="bm-kpi-sub">to hit budget</div></div>`;
+
+  renderMarketView(markets,fmtC,fmtP,daysRemaining);
+  renderChannelView(markets,fmtC,fmtP,totGoog,totMeta,totBing,daysRemaining);
+}
+
+function setPacingView(v){
+  pacingView=v;
+  document.getElementById('pacingMarketView').style.display=v==='market'?'block':'none';
+  document.getElementById('pacingChannelView').style.display=v==='channel'?'block':'none';
+  document.getElementById('pview-market').classList.toggle('active',v==='market');
+  document.getElementById('pview-channel').classList.toggle('active',v==='channel');
+}
+
+function setMarketSort(k,e){
+  marketSortKey=k;
+  document.querySelectorAll('[id^="mpsort-"]').forEach(b=>b.classList.remove('active'));
+  if(e&&e.target)e.target.classList.add('active');
+  recalcPacing();
+}
+
+function renderMarketView(markets,fmtC,fmtP,daysRemaining){
+  const gc='rgba(255,255,255,0.05)',tc='#555c67';
+  let sorted=[...markets];
+  if(marketSortKey==='var')sorted.sort((a,b)=>(a.variance||0)-(b.variance||0));
+  else if(marketSortKey==='spend')sorted.sort((a,b)=>b.total-a.total);
+  else if(marketSortKey==='pct')sorted.sort((a,b)=>(a.pctPaced||0)-(b.pctPaced||0));
+  else sorted.sort((a,b)=>a.mkt.localeCompare(b.mkt));
+
+  // Bar chart — top 12 by spend
+  const top12=sorted.slice(0,12);
+  if(chartReg['marketPacingChart'])chartReg['marketPacingChart'].destroy();
+  chartReg['marketPacingChart']=new Chart(document.getElementById('marketPacingChart'),{type:'bar',
+    data:{labels:top12.map(m=>m.mkt),datasets:[
+      {label:'Google',data:top12.map(m=>+m.gSpend.toFixed(0)),backgroundColor:'#2ecc8a88',stack:'s'},
+      {label:'Meta',  data:top12.map(m=>+m.mSpend.toFixed(0)),backgroundColor:'#4da6ff88',stack:'s'},
+      {label:'Bing',  data:top12.map(m=>+m.bSpend.toFixed(0)),backgroundColor:'#6488ff88',stack:'s'},
+      {label:'Budget',data:top12.map(m=>+m.totalBudget.toFixed(0)),backgroundColor:'#55585f44',borderRadius:2,type:'bar'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString(undefined,{maximumFractionDigits:0})}`}}},
+      scales:{x:{stacked:true,ticks:{color:tc,font:{size:10},maxRotation:35,autoSkip:false},grid:{color:gc},border:{color:'transparent'}},
+              y:{stacked:false,ticks:{color:tc,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:gc},border:{color:'transparent'}}}}});
+
+  const statusOf=m=>{
+    if(!m.variance&&m.variance!==0)return{l:'No budget',c:'pill-gray'};
+    if(m.variance>500)return{l:'Ahead ↑',c:'pill-green'};
+    if(m.variance>0)return{l:'On pace',c:'pill-blue'};
+    if(m.variance>-500)return{l:'Slight under',c:'pill-amber'};
+    return{l:'Behind ↓',c:'pill-red'};
+  };
+  const varC=v=>v==null?'':(v>=0?'color:var(--green)':'color:var(--red)');
+  const pctC=v=>v==null?'':(v>=90&&v<=110?'color:var(--green)':v>110?'color:var(--acc)':'color:var(--red)');
+
+  document.getElementById('marketTableTitle').textContent=`${sorted.length} markets · MTD pacing`;
+  document.getElementById('marketPacingBody').innerHTML=sorted.map(m=>{
+    const st=statusOf(m);
+    // Budget action: how much to increase (+) or decrease (-) daily budget
+    // = daily spend needed to hit budget minus what was spent yesterday
+    const budgetAdj=m.dailyNeeded!=null&&m.yesterdayTotal!=null
+      ?m.dailyNeeded-m.yesterdayTotal:null;
+    const adjColor=budgetAdj==null?''
+      :budgetAdj>100?'color:var(--red);font-weight:500'    // need to push more
+      :budgetAdj<-100?'color:var(--amber);font-weight:500' // need to pull back
+      :'color:var(--green)';                                // on track
+    const adjLabel=budgetAdj==null?'—'
+      :budgetAdj>100?'Push +'+fmtC(budgetAdj)+'/day'
+      :budgetAdj<-100?'Pull '+fmtC(budgetAdj)+'/day'
+      :'On track';
+    return`<tr>
+      <td style="font-weight:500">${m.mkt}</td>
+      <td class="mono" style="color:var(--green)">${fmtC(m.gSpend)}</td>
+      <td class="mono" style="color:var(--blue)">${fmtC(m.mSpend)}</td>
+      <td class="mono" style="color:#6488ff">${fmtC(m.bSpend)}</td>
+      <td class="mono" style="font-weight:500">${fmtC(m.total)}</td>
+      <td class="mono" style="color:var(--text2)">${fmtC(m.yesterdayTotal)}</td>
+      <td class="mono">${fmtC(m.totalBudget)}</td>
+      <td class="mono" style="${pctC(m.pctPaced)}">${m.pctPaced!=null?m.pctPaced.toFixed(1)+'%':'—'}</td>
+      <td class="mono" style="color:var(--text2)">${fmtC(m.recSpend)}</td>
+      <td class="mono" style="${varC(m.variance)}">${m.variance!=null?(m.variance>=0?'+':'')+fmtC(m.variance):'—'}</td>
+      <td class="mono">${fmtC(m.dailyNeeded)}</td>
+      <td class="mono" style="${adjColor}">${adjLabel}</td>
+      <td><span class="pill ${st.c}">${st.l}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderChannelView(markets,fmtC,fmtP,totGoog,totMeta,totBing,daysRemaining){
+  const gc='rgba(255,255,255,0.05)',tc='#555c67';
+  // Channel KPI cards
+  const chData=[
+    {name:'Google Ads',spend:totGoog,color:'#2ecc8a',bk:'google'},
+    {name:'Meta Ads',spend:totMeta,color:'#4da6ff',bk:'meta'},
+    {name:'Bing',spend:totBing,color:'#6488ff',bk:'bing'},
+  ];
+  const totAll=totGoog+totMeta+totBing;
+  document.getElementById('channelKpiCards').innerHTML=chData.map(ch=>{
+    const budget=markets.reduce((s,m)=>s+(+m.budget[ch.bk]||0),0);
+    const variance=budget>0?ch.spend-budget:null;
+    const pct=budget>0?ch.spend/budget*100:null;
+    return`<div class="bm-kpi" style="border-top:2px solid ${ch.color}">
+      <div class="bm-kpi-label">${ch.name}</div>
+      <div class="bm-kpi-val" style="color:${ch.color}">${fmtC(ch.spend)}</div>
+      <div class="bm-kpi-sub">Budget: ${fmtC(budget)} · ${pct!=null?pct.toFixed(1)+'% paced':'no budget set'}</div>
+      ${variance!=null?`<div style="font-size:11px;margin-top:4px;color:${variance>=0?'var(--green)':'var(--red)'}">${variance>=0?'+':''}${fmtC(variance)} variance</div>`:''}
+    </div>`;
+  }).join('');
+
+  // Channel mix donut
+  if(chartReg['channelMixChart'])chartReg['channelMixChart'].destroy();
+  document.getElementById('channelMixLegend').innerHTML=chData.filter(c=>c.spend>0).map(c=>`<span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:${c.color};flex-shrink:0;"></span>${c.name}: ${totAll>0?(c.spend/totAll*100).toFixed(1):'0'}%</span>`).join('');
+  chartReg['channelMixChart']=new Chart(document.getElementById('channelMixChart'),{type:'doughnut',
+    data:{labels:chData.map(c=>c.name),datasets:[{data:chData.map(c=>c.spend),backgroundColor:chData.map(c=>c.color+'88'),borderWidth:2,borderColor:'#13161b'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString(undefined,{maximumFractionDigits:0})} (${(ctx.parsed/totAll*100).toFixed(1)}%)`}}}}});
+
+  // Stacked bar by market & channel
+  const top10=markets.filter(m=>m.total>0).sort((a,b)=>b.total-a.total).slice(0,10);
+  if(chartReg['channelStackChart'])chartReg['channelStackChart'].destroy();
+  chartReg['channelStackChart']=new Chart(document.getElementById('channelStackChart'),{type:'bar',
+    data:{labels:top10.map(m=>m.mkt),datasets:[
+      {label:'Google',data:top10.map(m=>+m.gSpend.toFixed(0)),backgroundColor:'#2ecc8a88',stack:'s'},
+      {label:'Meta',  data:top10.map(m=>+m.mSpend.toFixed(0)),backgroundColor:'#4da6ff88',stack:'s'},
+      {label:'Bing',  data:top10.map(m=>+m.bSpend.toFixed(0)),backgroundColor:'#6488ff88',stack:'s'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{stacked:true,ticks:{color:tc,font:{size:10},maxRotation:35,autoSkip:false},grid:{color:gc},border:{color:'transparent'}},
+              y:{stacked:true,ticks:{color:tc,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:gc},border:{color:'transparent'}}}}});
+
+  // Channel table
+  document.getElementById('channelPacingBody').innerHTML=markets.filter(m=>m.total>0).sort((a,b)=>b.total-a.total).map(m=>{
+    const gb=+m.budget.google||0,mb=+m.budget.meta||0,bb=+m.budget.bing||0;
+    const gp=gb>0?m.gSpend/gb*100:null,mp_=mb>0?m.mSpend/mb*100:null,bp=bb>0?m.bSpend/bb*100:null;
+    const gv=gb>0?m.gSpend-gb:null,mv=mb>0?m.mSpend-mb:null,bv=bb>0?m.bSpend-bb:null;
+    const vc=v=>v==null?'':(v>=0?'color:var(--green)':'color:var(--red)');
+    const pc=v=>v==null?'':(v>=90&&v<=110?'color:var(--green)':v>110?'color:var(--acc)':'color:var(--red)');
+    // Per-channel daily needed and budget action
+    const gDaily=daysRemaining>0&&gb>0?(gb-m.gSpend)/daysRemaining:null;
+    const mDaily=daysRemaining>0&&mb>0?(mb-m.mSpend)/daysRemaining:null;
+    const bDaily=daysRemaining>0&&bb>0?(bb-m.bSpend)/daysRemaining:null;
+    const chAdj=(daily,yest)=>daily!=null&&yest!=null?daily-yest:null;
+    const gAdj=chAdj(gDaily,m.gYest),mAdj=chAdj(mDaily,m.mYest),bAdj=chAdj(bDaily,m.bYest);
+    const adjStyle=v=>v==null?'':v>100?'color:var(--red);font-weight:500':v<-100?'color:var(--amber);font-weight:500':'color:var(--green)';
+    const adjLabel=v=>v==null?'—':v>100?'Push +'+fmtC(v)+'/d':v<-100?'Pull '+fmtC(v)+'/d':'On track';
+    return`<tr>
+      <td style="font-weight:500">${m.mkt}</td>
+      <td class="mono" style="color:var(--green)">${fmtC(m.gSpend)}</td><td class="mono" style="color:var(--text2)">${fmtC(m.gYest)}</td><td class="mono">${fmtC(gb)}</td><td class="mono" style="${pc(gp)}">${gp!=null?gp.toFixed(1)+'%':'—'}</td><td class="mono" style="${vc(gv)}">${gv!=null?(gv>=0?'+':'')+fmtC(gv):'—'}</td><td class="mono" style="${adjStyle(gAdj)}">${adjLabel(gAdj)}</td>
+      <td class="mono" style="color:var(--blue)">${fmtC(m.mSpend)}</td><td class="mono" style="color:var(--text2)">${fmtC(m.mYest)}</td><td class="mono">${fmtC(mb)}</td><td class="mono" style="${pc(mp_)}">${mp_!=null?mp_.toFixed(1)+'%':'—'}</td><td class="mono" style="${vc(mv)}">${mv!=null?(mv>=0?'+':'')+fmtC(mv):'—'}</td><td class="mono" style="${adjStyle(mAdj)}">${adjLabel(mAdj)}</td>
+      <td class="mono" style="color:#6488ff">${fmtC(m.bSpend)}</td><td class="mono" style="color:var(--text2)">${fmtC(m.bYest)}</td><td class="mono">${fmtC(bb)}</td><td class="mono" style="${pc(bp)}">${bp!=null?bp.toFixed(1)+'%':'—'}</td><td class="mono" style="${vc(bv)}">${bv!=null?(bv>=0?'+':'')+fmtC(bv):'—'}</td><td class="mono" style="${adjStyle(bAdj)}">${adjLabel(bAdj)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function resetPlatformData(){
+  Object.keys(platformSpend).forEach(k=>{platformSpend[k]={};});
+  ['google','meta','bing'].forEach(p=>{
+    const el=document.getElementById('piStatus-'+p);
+    const yel=document.getElementById('piYest-'+p);
+    const card=document.getElementById('pi'+p.charAt(0).toUpperCase()+p.slice(1));
+    if(el){el.textContent='Not loaded';el.style.color='var(--text3)';}
+    if(yel){yel.style.display='none';yel.textContent='';}
+    if(card)card.style.borderColor='';
+  });
+  ['marketPacingChart','channelMixChart','channelStackChart'].forEach(id=>{if(chartReg[id]){chartReg[id].destroy();delete chartReg[id];}});
+  document.getElementById('pacingDashboard').style.display='none';
+}
+
+/* ─── TABS ─── */
+const TAB_LABELS={'matrix':'Opportunity matrix','map':'LTA% state map','table':'State breakdown','volume':'Volume trends','budget':'Budget modeller','campaigns':'Campaigns','is':'Impression share','pacing':'Pacing'};
+function showTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('[id^="sidenav-"]').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>{if(b.textContent.trim()===TAB_LABELS[tab])b.classList.add('active');});
+  const sn=document.getElementById('sidenav-'+tab);if(sn)sn.classList.add('active');
+  if(tab==='volume')initVolumeCharts();
+  if(tab==='map')initMap();
+  if(tab==='budget')runBudgetModel();
+  if(tab==='is')initISTab();
+}
+
+/* ─── INIT ─── */
+window.addEventListener('DOMContentLoaded',()=>{
+  renderKPIs();renderBanner();renderSizeOpts();
+  rebuildMatrix();renderQuadCards('all');renderTable();
+  buildMapLegend();
+  document.getElementById('nav-all').classList.add('active');
+  initBudgetTable();
+});
+</script>
+</body>
+</html>
